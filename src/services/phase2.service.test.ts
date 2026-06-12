@@ -44,14 +44,16 @@ const techUser: AuthenticatedRequestUser = {
   id: "user-1",
   email: "tech@test.com",
   role: "TECHNICIAN",
-  employee_code: "TECH-1",
+  employeeCode: "TECH-1",
+  fullName: "Technician User",
 };
 
 const supUser: AuthenticatedRequestUser = {
   id: "user-2",
   email: "sup@test.com",
   role: "SUPERVISOR",
-  employee_code: "SUP-1",
+  employeeCode: "SUP-1",
+  fullName: "Supervisor User",
 };
 
 describe("getEquipmentHistory", () => {

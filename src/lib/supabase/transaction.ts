@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { AppError } from "@/lib/errors";
+import { AppError, ErrorCode } from "@/lib/errors";
 import type { Database } from "@/types/database";
 
 export async function withTransaction<T>(
@@ -12,7 +12,7 @@ export async function withTransaction<T>(
   if (beginError) {
     throw new AppError(
       `Failed to begin transaction: ${beginError.message}`,
-      "INTERNAL_ERROR",
+      ErrorCode.INTERNAL_ERROR,
       500,
     );
   }
@@ -24,7 +24,7 @@ export async function withTransaction<T>(
     if (commitError) {
       throw new AppError(
         `Failed to commit transaction: ${commitError.message}`,
-        "INTERNAL_ERROR",
+        ErrorCode.INTERNAL_ERROR,
         500,
       );
     }
@@ -36,7 +36,7 @@ export async function withTransaction<T>(
     if (rollbackError) {
       throw new AppError(
         `Failed to rollback transaction: ${rollbackError.message}`,
-        "INTERNAL_ERROR",
+        ErrorCode.INTERNAL_ERROR,
         500,
       );
     }

@@ -25,6 +25,10 @@ vi.mock("@/services/phase2.service", () => ({
   getSupervisorDashboard: vi.fn(),
 }));
 
+vi.mock("@/lib/agent", () => ({
+  processVoiceQuery: vi.fn(),
+}));
+
 vi.mock("@/lib/api/middleware", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/middleware")>();
   return {
@@ -56,7 +60,7 @@ describe("API Endpoints", () => {
 
   it("POST /api/inspections/create", async () => {
     const { createInspection: mockService } = await import("@/services/phase2.service");
-    vi.mocked(mockService).mockResolvedValue({ inspection: { id: "1" }, alertCreated: false });
+    vi.mocked(mockService).mockResolvedValue({ inspection: { id: "1" } as any, alertCreated: false });
 
     const req = createRequest({ equipmentId: "00000000-0000-0000-0000-000000000000", title: "Test", description: "Desc", severity: "LOW" });
     const res = await createInspection(req, {});
@@ -67,7 +71,7 @@ describe("API Endpoints", () => {
 
   it("POST /api/work-orders/create", async () => {
     const { createWorkOrder: mockService } = await import("@/services/phase2.service");
-    vi.mocked(mockService).mockResolvedValue({ workOrder: { id: "2" } });
+    vi.mocked(mockService).mockResolvedValue({ workOrder: { id: "2" } as any });
 
     const req = createRequest({ equipmentId: "00000000-0000-0000-0000-000000000000", title: "Test", description: "Desc", priority: "LOW" });
     const res = await createWorkOrder(req, {});
@@ -78,7 +82,7 @@ describe("API Endpoints", () => {
 
   it("PATCH /api/work-orders/[id]", async () => {
     const { updateWorkOrder: mockService } = await import("@/services/phase2.service");
-    vi.mocked(mockService).mockResolvedValue({ workOrder: { id: "3" }, previousStatus: "OPEN" });
+    vi.mocked(mockService).mockResolvedValue({ workOrder: { id: "3" } as any, previousStatus: "OPEN" });
 
     const req = new NextRequest("http://localhost/api", { method: "PATCH", body: JSON.stringify({ status: "CLOSED" }) });
     const res = await updateWorkOrder(req, { params: Promise.resolve({ id: "wo-1" }) });
@@ -99,8 +103,8 @@ describe("API Endpoints", () => {
   });
 
   it("POST /api/voice-query", async () => {
-    const { createVoiceTranscript: mockService } = await import("@/services/phase2.service");
-    vi.mocked(mockService).mockResolvedValue({ placeholder: true, agentResponse: "hi", transcriptId: "1", sessionId: "s" });
+    const { processVoiceQuery: mockService } = await import("@/lib/agent");
+    vi.mocked(mockService).mockResolvedValue({ agentResponse: "hi", transcriptId: "1", sessionId: "s", toolsUsed: [] });
 
     const req = createRequest({ userPrompt: "hello" });
     const res = await voiceQuery(req, {});

@@ -1,18 +1,17 @@
 import { redirect } from "next/navigation";
-
-import { createClient } from "@/lib/supabase/server";
-
-export const dynamic = "force-dynamic";
+import { requireAuth } from "@/lib/api/middleware";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect("/dashboard");
+  let user;
+  try {
+    user = await requireAuth();
+  } catch (err) {
+    redirect("/login");
   }
 
-  redirect("/login");
+  if (user.role === "SUPERVISOR") {
+    redirect("/supervisor");
+  } else {
+    redirect("/technician");
+  }
 }
