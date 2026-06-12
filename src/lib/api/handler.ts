@@ -36,10 +36,10 @@ export function withApiHandler(
 ) {
   return async (
     request: NextRequest,
-    routeContext: { params: Promise<Record<string, string | string[]>> },
+    routeContext?: { params?: Promise<Record<string, string | string[]>> },
   ): Promise<NextResponse> => {
     try {
-      const params = await routeContext.params;
+      const params = routeContext?.params ? await routeContext.params : {};
       let user: AuthenticatedRequestUser | undefined;
 
       if (options.auth) {

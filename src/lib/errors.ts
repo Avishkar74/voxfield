@@ -34,6 +34,13 @@ export class UnauthorizedError extends AppError {
   }
 }
 
+export class NotFoundError extends AppError {
+  constructor(message = "Requested resource not found") {
+    super(message, ErrorCode.NOT_FOUND, 404);
+    this.name = "NotFoundError";
+  }
+}
+
 export class ForbiddenError extends AppError {
   constructor(message = "You do not have permission to perform this action") {
     super(message, ErrorCode.FORBIDDEN, 403);
