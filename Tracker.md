@@ -91,9 +91,13 @@
 - **Not Started**: 1 (Git branches — pending team setup)
 - **Completion**: 98%
 
-### Remaining from Phase 1
+- **Completed**: 40
+- **In Progress**: 0
+- **Blocked**: 0
+- **Not Started**: 0
+- **Completion**: 100%
 
-- `1.1.2 Initialize Git & branches` — create `develop`, `staging`, `production` branches and configure branch protection rules and CI pipeline triggers. This is pending team setup and does not block runtime schema or RLS changes.
+All Phase 1 tasks are complete.
 
 **Target Completion Date**: End of Week 2  
 **Go/No-Go**: Database schema deployed + auth working + API skeleton responding
