@@ -278,57 +278,57 @@ All Phase 1 tasks are complete.
 
 ## Phase 5: Offline & Sync
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Duration**: Week 5-6  
 **Owner**: Offline Engineer + Frontend  
-**Depends On**: Phase 4 ✅ (partial)
+**Depends On**: Phase 4 ✅
 
 ### Tasks
 
 | # | Task | Subtasks | Status | Owner | Notes |
 |---|------|----------|--------|-------|-------|
-| **5.1** | Service Worker Setup | 4 subtasks | ⬜ | Offline | Workbox |
-| 5.1.1 | Create public/sw.js | Service Worker file | ⬜ | Offline | Workbox config |
-| 5.1.2 | Configure Workbox strategies | Cache, network, stale-while-revalidate | ⬜ | Offline | Per resource type |
-| 5.1.3 | Build Service Worker | `npm run build` integration | ⬜ | Offline | Auto-generated |
-| 5.1.4 | Register in frontend | SW registration on load | ⬜ | Frontend | Handle updates |
-| **5.2** | IndexedDB Implementation | 5 subtasks | ⬜ | Offline | Local storage |
-| 5.2.1 | Create offline database | `voiceassistant_offline` | ⬜ | Offline | Four object stores |
-| 5.2.2 | offline_queue store | Queue items with status | ⬜ | Offline | PENDING_SYNC, SYNCED, FAILED |
-| 5.2.3 | voice_recordings store | Temp audio blobs | ⬜ | Offline | Clean up after sync |
-| 5.2.4 | sync_metadata store | Last sync time, state | ⬜ | Offline | Tracking |
-| 5.2.5 | Create IndexedDB wrapper | `lib/indexeddb.ts` CRUD ops | ⬜ | Offline | Async API |
-| **5.3** | Offline Detection | 3 subtasks | ⬜ | Frontend | Real-time status |
-| 5.3.1 | Monitor navigator.onLine | Event listener | ⬜ | Frontend | Instant detection |
-| 5.3.2 | Periodic health check ping | /api/health every 30s | ⬜ | Frontend | Captive portal detection |
-| 5.3.3 | Display status UI | Green/amber/red dot | ⬜ | Frontend | Show pending count |
-| **5.4** | Sync Engine | 5 subtasks | ⬜ | Offline | FIFO processing |
-| 5.4.1 | Create sync service | `lib/sync.ts` main handler | ⬜ | Offline | Orchestrate sync |
-| 5.4.2 | Detect reconnection | navigator.onLine change event | ⬜ | Offline | Trigger sync |
-| 5.4.3 | Get pending items | Read PENDING_SYNC from IndexedDB | ⬜ | Offline | FIFO order |
-| 5.4.4 | Batch POST to server | /api/sync-offline-queue | ⬜ | Offline | Max 10 per request |
-| 5.4.5 | Process responses | Mark as SYNCED or FAILED | ⬜ | Offline | Update status |
-| **5.5** | Retry Mechanism | 4 subtasks | ⬜ | Offline | Exponential backoff |
-| 5.5.1 | Implement backoff delays | 0s, 1s, 5s, then manual | ⬜ | Offline | Exponential |
-| 5.5.2 | Track attempt count | Increment on each retry | ⬜ | Offline | Max 3 auto |
-| 5.5.3 | Failed items status | Change to FAILED after 3 | ⬜ | Offline | Show retry button |
-| 5.5.4 | Manual retry handler | User-triggered retry | ⬜ | Frontend | Reset attempt count |
-| **5.6** | Background Sync API | 2 subtasks | ⬜ | Offline | Optional enhancement |
-| 5.6.1 | Register sync event | navigator.serviceWorker.ready | ⬜ | Offline | Tag: voiceassistant-sync |
-| 5.6.2 | Handle sync event in SW | Trigger sync when online | ⬜ | Offline | Fallback if API unavailable |
-| **5.7** | PWA Installation | 3 subtasks | ⬜ | Frontend | Web App Manifest |
-| 5.7.1 | Create manifest.json | Name, icons, display, theme | ⬜ | Frontend | public/manifest.json |
-| 5.7.2 | Add manifest link | HTML head includes manifest | ⬜ | Frontend | Link rel="manifest" |
-| 5.7.3 | Test installation | "Add to Home Screen" works | ⬜ | Frontend | iOS + Android |
+| **5.1** | Service Worker Setup | 4 subtasks | ✅ | Offline | Workbox |
+| 5.1.1 | Create public/sw.js | Service Worker file | ✅ | Offline | Workbox config |
+| 5.1.2 | Configure Workbox strategies | Cache, network, stale-while-revalidate | ✅ | Offline | Per resource type |
+| 5.1.3 | Build Service Worker | `npm run build` integration | ✅ | Offline | Auto-generated |
+| 5.1.4 | Register in frontend | SW registration on load | ✅ | Frontend | Handle updates |
+| **5.2** | IndexedDB Implementation | 5 subtasks | ✅ | Offline | Local storage |
+| 5.2.1 | Create offline database | `voiceassistant_offline` | ✅ | Offline | Four object stores |
+| 5.2.2 | offline_queue store | Queue items with status | ✅ | Offline | PENDING_SYNC, SYNCED, FAILED |
+| 5.2.3 | voice_recordings store | Temp audio blobs | ✅ | Offline | Clean up after sync |
+| 5.2.4 | sync_metadata store | Last sync time, state | ✅ | Offline | Tracking |
+| 5.2.5 | Create IndexedDB wrapper | `lib/indexeddb.ts` CRUD ops | ✅ | Offline | Async API |
+| **5.3** | Offline Detection | 3 subtasks | ✅ | Frontend | Real-time status |
+| 5.3.1 | Monitor navigator.onLine | Event listener | ✅ | Frontend | Instant detection |
+| 5.3.2 | Periodic health check ping | /api/health every 30s | ✅ | Frontend | Captive portal detection |
+| 5.3.3 | Display status UI | Green/amber/red dot | ✅ | Frontend | Show pending count |
+| **5.4** | Sync Engine | 5 subtasks | ✅ | Offline | FIFO processing |
+| 5.4.1 | Create sync service | `lib/sync.ts` main handler | ✅ | Offline | Orchestrate sync |
+| 5.4.2 | Detect reconnection | navigator.onLine change event | ✅ | Offline | Trigger sync |
+| 5.4.3 | Get pending items | Read PENDING_SYNC from IndexedDB | ✅ | Offline | FIFO order |
+| 5.4.4 | Batch POST to server | /api/sync-offline-queue | ✅ | Offline | Max 10 per request |
+| 5.4.5 | Process responses | Mark as SYNCED or FAILED | ✅ | Offline | Update status |
+| **5.5** | Retry Mechanism | 4 subtasks | ✅ | Offline | Exponential backoff |
+| 5.5.1 | Implement backoff delays | 0s, 1s, 5s, then manual | ✅ | Offline | Exponential |
+| 5.5.2 | Track attempt count | Increment on each retry | ✅ | Offline | Max 3 auto |
+| 5.5.3 | Failed items status | Change to FAILED after 3 | ✅ | Offline | Show retry button |
+| 5.5.4 | Manual retry handler | User-triggered retry | ✅ | Frontend | Reset attempt count |
+| **5.6** | Background Sync API | 2 subtasks | ✅ | Offline | Optional enhancement |
+| 5.6.1 | Register sync event | navigator.serviceWorker.ready | ✅ | Offline | Tag: voiceassistant-sync |
+| 5.6.2 | Handle sync event in SW | Trigger sync when online | ✅ | Offline | Fallback if API unavailable |
+| **5.7** | PWA Installation | 3 subtasks | ✅ | Frontend | Web App Manifest |
+| 5.7.1 | Create manifest.json | Name, icons, display, theme | ✅ | Frontend | public/manifest.json |
+| 5.7.2 | Add manifest link | HTML head includes manifest | ✅ | Frontend | Link rel="manifest" |
+| 5.7.3 | Test installation | "Add to Home Screen" works | ✅ | Frontend | iOS + Android |
 
 ### Phase 5 Summary
 
 - **Total Tasks**: 31
-- **Completed**: 0
+- **Completed**: 31
 - **In Progress**: 0
 - **Blocked**: 0
-- **Not Started**: 31
-- **Completion**: 0%
+- **Not Started**: 0
+- **Completion**: 100%
 
 **Depends On**: Phase 4 ✅  
 **Go/No-Go**: App works offline + offline queue syncs + PWA installable + sync maintains consistency

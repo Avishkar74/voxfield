@@ -50,6 +50,7 @@ DROP POLICY IF EXISTS "work_orders_update_own" ON public.work_orders;
 -- Technicians are allowed to update status and completion timestamp only.
 -- Enforce that all other columns remain unchanged by comparing to the
 -- current row values using IS NOT DISTINCT FROM (safe for NULLs).
+DROP POLICY IF EXISTS "work_orders_update_status_technician" ON public.work_orders;
 CREATE POLICY "work_orders_update_status_technician"
   ON public.work_orders
   FOR UPDATE

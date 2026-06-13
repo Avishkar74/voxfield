@@ -9,6 +9,8 @@ interface Transcript {
   created_at: string;
 }
 
+import { FormattedDate } from "./FormattedDate";
+
 export function TranscriptLog({ transcripts }: { transcripts: Transcript[] }) {
   if (!transcripts || transcripts.length === 0) {
     return (
@@ -47,7 +49,9 @@ export function TranscriptLog({ transcripts }: { transcripts: Transcript[] }) {
               </div>
             </div>
             <div className="text-center mt-2">
-              <span className="text-[10px] text-gray-400">{new Date(t.created_at).toLocaleString()}</span>
+              <span className="text-[10px] text-gray-400">
+                <FormattedDate date={t.created_at} includeTime={true} />
+              </span>
             </div>
           </div>
         ))}

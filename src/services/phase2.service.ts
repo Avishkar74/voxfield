@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { processVoiceQuery } from "@/lib/agent";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -434,6 +435,8 @@ export async function createVoiceTranscript(
 }
 
 export async function processOfflineQueue(
+  supabase: SupabaseClient<Database>,
+  currentUser: AuthenticatedRequestUser,
   input: SyncOfflineQueueInput,
 ): Promise<OfflineSyncResult> {
   const normalized = syncOfflineQueueSchema.safeParse(input);
@@ -442,12 +445,58 @@ export async function processOfflineQueue(
     throw new ValidationError(normalized.error.issues[0]?.message ?? "Invalid input");
   }
 
+  let processed = 0;
+  let failed = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const item of normalized.data.items) {
+    try {
+      const payload = item.payload || {};
+
+      switch (item.operation) {
+        case "create-inspection": {
+          await createInspection(supabase, currentUser, payload as CreateInspectionInput);
+          processed++;
+          break;
+        }
+        case "create-work-order": {
+          await createWorkOrder(supabase, currentUser, payload as CreateWorkOrderInput);
+          processed++;
+          break;
+        }
+        case "update-work-order": {
+          const { workOrderId, ...inputPayload } = payload as any;
+          if (!workOrderId) {
+            throw new ValidationError("Missing workOrderId in update payload");
+          }
+          await updateWorkOrder(supabase, currentUser, workOrderId, inputPayload as UpdateWorkOrderInput);
+          processed++;
+          break;
+        }
+        case "voice-query": {
+          if (!payload.userPrompt) {
+            throw new ValidationError("Missing userPrompt in voice-query payload");
+          }
+          await processVoiceQuery(supabase, currentUser, payload.userPrompt as string, payload.sessionId as string);
+          processed++;
+          break;
+        }
+        default:
+          skipped++;
+          errors.push(`Unknown operation: ${item.operation}`);
+      }
+    } catch (err: any) {
+      failed++;
+      errors.push(`Failed item ${item.id} (${item.operation}): ${err.message || err}`);
+    }
+  }
+
   return {
-    processed: 0,
-    failed: 0,
-    skipped: normalized.data.items.length,
-    message:
-      "Offline sync is a Phase 5 placeholder. Items were accepted but not processed yet.",
+    processed,
+    failed,
+    skipped,
+    message: errors.length > 0 ? `Completed with errors: ${errors.join("; ")}` : "Sync completed successfully",
   };
 }
 

@@ -10,6 +10,8 @@ interface Inspection {
   created_at: string;
 }
 
+import { FormattedDate } from "./FormattedDate";
+
 export function InspectionsList({ inspections }: { inspections: Inspection[] }) {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
@@ -45,7 +47,7 @@ export function InspectionsList({ inspections }: { inspections: Inspection[] }) 
                 {ins.title}
               </p>
               <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {new Date(ins.created_at).toLocaleDateString()}
+                <FormattedDate date={ins.created_at} includeTime={false} />
               </p>
             </div>
             <div className="flex items-center gap-2">

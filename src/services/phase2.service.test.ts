@@ -14,6 +14,10 @@ import {
 import { ValidationError, ForbiddenError } from "@/lib/errors";
 import type { AuthenticatedRequestUser } from "@/lib/api/middleware";
 
+vi.mock("@/lib/agent", () => ({
+  processVoiceQuery: vi.fn().mockResolvedValue({ agentResponse: "Mock response" }),
+}));
+
 describe("phase2 helpers", () => {
   it("allows forward work order transitions", () => {
     expect(canAdvanceWorkOrderStatus("OPEN", "IN_PROGRESS")).toBe(true);
@@ -178,12 +182,75 @@ describe("createVoiceTranscript", () => {
 });
 
 describe("processOfflineQueue", () => {
-  it("returns default offline sync result", async () => {
-    const result = await processOfflineQueue({
-      items: [{ id: "00000000-0000-0000-0000-000000000000", operation: "create_inspection", queuedAt: "2024-01-01T00:00:00Z" }],
+  it("processes offline queue operations", async () => {
+    const { supabase, mockRpc, mockFrom } = createMockSupabase();
+
+    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: { id: "user-1" }, error: null });
+    const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+    mockFrom.mockReturnValue({ select: mockSelect });
+
+    mockRpc.mockImplementation((name) => {
+      if (name === "create_inspection_tx") {
+        return Promise.resolve({ data: { inspection: { id: "ins-1" }, alertCreated: false }, error: null });
+      }
+      if (name === "create_work_order_tx") {
+        return Promise.resolve({ data: { workOrder: { id: "wo-1" } }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
     });
+
+    const result = await processOfflineQueue(supabase, techUser, {
+      items: [
+        {
+          id: "item-1",
+          operation: "create-inspection",
+          payload: { equipmentId: "00000000-0000-0000-0000-000000000000", title: "Inspection 1", severity: "LOW", description: "All good" },
+          queuedAt: "2026-06-13T00:00:00Z",
+        },
+        {
+          id: "item-2",
+          operation: "create-work-order",
+          payload: { equipmentId: "00000000-0000-0000-0000-000000000000", title: "WO 1", priority: "MEDIUM", description: "Fix leak" },
+          queuedAt: "2026-06-13T00:00:00Z",
+        },
+        {
+          id: "item-3",
+          operation: "invalid-op",
+          payload: {},
+          queuedAt: "2026-06-13T00:00:00Z",
+        },
+      ],
+    });
+
+    expect(result.processed).toBe(2);
     expect(result.skipped).toBe(1);
+    expect(result.failed).toBe(0);
+  });
+
+  it("handles operation execution errors gracefully", async () => {
+    const { supabase, mockRpc, mockFrom } = createMockSupabase();
+
+    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: { id: "user-1" }, error: null });
+    const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+    mockFrom.mockReturnValue({ select: mockSelect });
+
+    mockRpc.mockResolvedValue({ data: null, error: { message: "DB Error" } });
+
+    const result = await processOfflineQueue(supabase, techUser, {
+      items: [
+        {
+          id: "item-1",
+          operation: "create-inspection",
+          payload: { equipmentId: "00000000-0000-0000-0000-000000000000", title: "Inspection 1", severity: "LOW", description: "All good" },
+          queuedAt: "2026-06-13T00:00:00Z",
+        },
+      ],
+    });
+
     expect(result.processed).toBe(0);
+    expect(result.failed).toBe(1);
   });
 });
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mic, LayoutDashboard, Settings, LogOut, Bell } from "lucide-react";
 import { AuthenticatedRequestUser } from "@/lib/api/middleware";
+import { OfflineStatus } from "@/components/dashboard/OfflineStatus";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -88,6 +89,9 @@ export function AppLayout({ children, user }: AppLayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 w-full overflow-x-hidden p-4 md:p-8 bg-gray-50 dark:bg-gray-950 pb-24 md:pb-8">
+        <div className="flex justify-between items-center mb-6">
+          <OfflineStatus />
+        </div>
         {children}
       </main>
 

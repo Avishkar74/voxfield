@@ -4,6 +4,8 @@ import { Activity, User, Mic } from "lucide-react";
 
 import type { ActivityLog } from "@/types/database";
 
+import { FormattedDate } from "./FormattedDate";
+
 export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
   if (!logs || logs.length === 0) {
     return (
@@ -41,7 +43,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                 <span className="text-gray-500 dark:text-gray-400"> on {log.entity_type}</span>
               </p>
               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                {new Date(log.created_at).toLocaleString()}
+                <FormattedDate date={log.created_at} includeTime={true} />
               </p>
             </div>
           </div>

@@ -11,6 +11,8 @@ interface WorkOrder {
   created_at: string;
 }
 
+import { FormattedDate } from "./FormattedDate";
+
 export function WorkOrdersList({ workOrders }: { workOrders: WorkOrder[] }) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -67,7 +69,7 @@ export function WorkOrdersList({ workOrders }: { workOrders: WorkOrder[] }) {
               {wo.title}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Created: {new Date(wo.created_at).toLocaleDateString()}
+              Created: <FormattedDate date={wo.created_at} includeTime={false} />
             </p>
           </div>
         ))}

@@ -11,6 +11,8 @@ interface Alert {
   created_at: string;
 }
 
+import { FormattedDate } from "./FormattedDate";
+
 export function AlertsList({ alerts }: { alerts: Alert[] }) {
   if (!alerts || alerts.length === 0) {
     return (
@@ -49,7 +51,9 @@ export function AlertsList({ alerts }: { alerts: Alert[] }) {
                 <span className={`text-[10px] font-bold px-1.5 rounded ${alert.severity === 'CRITICAL' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
                   {alert.severity}
                 </span>
-                <span className="text-[10px] text-gray-500">{new Date(alert.created_at).toLocaleString()}</span>
+                <span className="text-[10px] text-gray-500">
+                  <FormattedDate date={alert.created_at} includeTime={true} />
+                </span>
               </div>
             </div>
           </div>
