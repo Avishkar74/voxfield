@@ -1,18 +1,12 @@
 -- seed.sql: Realistic mock data for VoxField
 
--- 1. Create a mock user in auth.users (Supabase requires this for the foreign key)
+-- 1. Create a mock user in auth.users (Supabase trigger handle_new_user automatically inserts into public.users)
 INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'tech@voxfield.com', 'hashed_pwd_mock', now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"John Doe"}', now(), now(), '', '', '', ''),
-  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'supervisor@voxfield.com', 'hashed_pwd_mock', now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Jane Smith"}', now(), now(), '', '', '', '')
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'tech@voxfield.com', 'hashed_pwd_mock', now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"John Doe","employee_code":"TECH-001","role":"TECHNICIAN"}', now(), now(), '', '', '', ''),
+  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'supervisor@voxfield.com', 'hashed_pwd_mock', now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Jane Smith","employee_code":"SUP-001","role":"SUPERVISOR"}', now(), now(), '', '', '', '')
 ON CONFLICT (id) DO NOTHING;
 
--- 2. Insert into public.users
-INSERT INTO public.users (id, employee_code, full_name, email, role)
-VALUES
-  ('11111111-1111-1111-1111-111111111111', 'TECH-001', 'John Doe', 'tech@voxfield.com', 'TECHNICIAN'),
-  ('22222222-2222-2222-2222-222222222222', 'SUP-001', 'Jane Smith', 'supervisor@voxfield.com', 'SUPERVISOR')
-ON CONFLICT (id) DO NOTHING;
 
 -- 3. Insert realistic Equipment
 INSERT INTO public.equipment (id, equipment_code, name, location, manufacturer, installation_date, status)

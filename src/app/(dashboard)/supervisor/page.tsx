@@ -4,17 +4,8 @@ import { VoiceInput } from "@/components/voice/VoiceInput";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { WorkOrdersKanban } from "@/components/dashboard/WorkOrdersKanban";
 import { AlertsList } from "@/components/dashboard/AlertsList";
-import dynamic from "next/dynamic";
-
-const TranscriptLog = dynamic(
-  () => import("@/components/dashboard/TranscriptLog").then((m) => m.TranscriptLog),
-  { ssr: false }
-);
-
-const ActivityFeed = dynamic(
-  () => import("@/components/dashboard/ActivityFeed").then((m) => m.ActivityFeed),
-  { ssr: false }
-);
+import { TranscriptLog } from "@/components/dashboard/TranscriptLog";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SupervisorDashboardPage() {

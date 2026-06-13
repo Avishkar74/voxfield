@@ -72,15 +72,16 @@ describe("Agent Core", () => {
   });
 
   describe("Tool Definitions", () => {
-    it("should generate 5 functional tools", () => {
+    it("should generate 6 functional tools", () => {
       const tools = getAgentTools(mockSupabase, techUser);
-      expect(tools.length).toBe(5);
+      expect(tools.length).toBe(6);
       const names = tools.map(t => t.function.name);
       expect(names).toContain("getEquipmentHistory");
       expect(names).toContain("createInspection");
       expect(names).toContain("createWorkOrder");
       expect(names).toContain("updateWorkOrder");
       expect(names).toContain("createAlert");
+      expect(names).toContain("executeDatabaseQuery");
     });
 
     it("should have correct schema for createInspection", () => {
@@ -93,6 +94,23 @@ describe("Agent Core", () => {
       const tools = getAgentTools(mockSupabase, techUser);
       const woTool = tools.find(t => t.function.name === "createWorkOrder")!;
       expect(woTool.function.parameters?.required).toContain("priority");
+    });
+
+    it("should execute executeDatabaseQuery with valid select query", async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: [{ count: 5 }], error: null });
+      const tools = getAgentTools(mockSupabase, techUser);
+      const tool = tools.find(t => t.function.name === "executeDatabaseQuery")!;
+      const res = await (tool.function as any).function({ query: "SELECT count(*) FROM work_orders" });
+      expect(res).toContain("count");
+      expect(mockSupabase.rpc).toHaveBeenCalledWith("execute_read_only_sql", { query: "SELECT count(*) FROM work_orders" });
+    });
+
+    it("should block write queries in executeDatabaseQuery", async () => {
+      const tools = getAgentTools(mockSupabase, techUser);
+      const tool = tools.find(t => t.function.name === "executeDatabaseQuery")!;
+      const res = await (tool.function as any).function({ query: "DROP TABLE users" });
+      expect(res).toContain("SECURITY ERROR");
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
     });
 
     it("should execute getEquipmentHistory without crashing", async () => {
