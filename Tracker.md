@@ -337,60 +337,60 @@ All Phase 1 tasks are complete.
 
 ## Phase 6: Testing & Polish
 
-**Status**: ⬜ Not Started  
+**Status**: ✅ Complete  
 **Duration**: Week 6-7  
 **Owner**: QA Lead + all team members  
-**Depends On**: Phase 5 ✅ (partial)
+**Depends On**: Phase 5 ✅
 
 ### Tasks
 
 | # | Task | Subtasks | Status | Owner | Notes |
 |---|------|----------|--------|-------|-------|
-| **6.1** | Unit Tests | 3 subtasks | ⬜ | QA | Jest, ≥90% coverage |
-| 6.1.1 | Test all 6 tools | Valid + invalid inputs | ⬜ | QA | Mocked Supabase |
-| 6.1.2 | Test all 8 endpoints | Status, schema, errors | ⬜ | QA | Middleware tests |
-| 6.1.3 | Test utility functions | Auth, validation, errors | ⬜ | QA | Edge cases |
-| **6.2** | Integration Tests | 5 subtasks | ⬜ | QA | Supertest |
-| 6.2.1 | Voice query flow | Transcript → agent → response | ⬜ | QA | Real agent call |
-| 6.2.2 | Inspection flow | Create → auto-alert → stored | ⬜ | QA | Verify alert |
-| 6.2.3 | Work order flow | Create → update → verify | ⬜ | QA | Status transitions |
-| 6.2.4 | Offline sync flow | Queue → sync → verified | ⬜ | QA | Full round-trip |
-| 6.2.5 | Dashboard data flow | Query → aggregation → response | ⬜ | QA | Performance check |
-| **6.3** | E2E Tests | 5 subtasks | ⬜ | QA | Cypress |
-| 6.3.1 | Technician voice flow | Login → voice → response → dashboard | ⬜ | QA | Mobile viewport |
-| 6.3.2 | Inspection flow | Create → alert → supervisor sees | ⬜ | QA | WebSocket updates |
-| 6.3.3 | Work order flow | Create → update → verify | ⬜ | QA | Kanban moves |
-| 6.3.4 | Offline flow | Offline → queue → reconnect → sync | ⬜ | QA | Network emulation |
-| 6.3.5 | Supervisor dashboard | Load → filters → search → alert | ⬜ | QA | Real-time updates |
-| **6.4** | Performance Optimization | 5 subtasks | ⬜ | Frontend | Lighthouse ≥90 |
-| 6.4.1 | Measure Lighthouse score | Run locally + on staging | ⬜ | Frontend | Current baseline |
-| 6.4.2 | Code splitting | Dashboard components lazy load | ⬜ | Frontend | Reduce main bundle |
-| 6.4.3 | Image optimization | Compress + modern formats | ⬜ | Frontend | webp, avif |
-| 6.4.4 | Minification & compression | Gzip assets | ⬜ | Frontend | Vercel auto-does |
-| 6.4.5 | API response caching | Cache appropriate endpoints | ⬜ | Backend | Stale-while-revalidate |
-| **6.5** | Accessibility (WCAG 2.1 AA) | 7 subtasks | ⬜ | Frontend | Full audit |
-| 6.5.1 | Form labels | All inputs have associated labels | ⬜ | Frontend | htmlFor attribute |
-| 6.5.2 | Button aria-labels | For icon-only buttons | ⬜ | Frontend | Microphone button |
-| 6.5.3 | Colour contrast | ≥4.5:1 text ratio | ⬜ | Frontend | Check with tool |
-| 6.5.4 | Dark mode | Full support, WCAG in both modes | ⬜ | Frontend | Test both |
-| 6.5.5 | Keyboard navigation | Tab order, focus visible, no trap | ⬜ | Frontend | Manual test |
-| 6.5.6 | Screen reader test | NVDA + VoiceOver | ⬜ | QA | Landmark regions |
-| 6.5.7 | Touch targets | ≥44x44px minimum | ⬜ | Frontend | Especially mobile |
-| **6.6** | Bug Fixes & Polish | 5 subtasks | ⬜ | QA | No P1/P2 bugs |
-| 6.6.1 | End-to-end manual testing | All flows on real devices | ⬜ | QA | iOS Safari + Android |
-| 6.6.2 | Fix remaining bugs | Log in bug tracker | ⬜ | QA | Prioritise P1 first |
-| 6.6.3 | Improve error messages | Clear, actionable language | ⬜ | Frontend | User-friendly |
-| 6.6.4 | Polish animations | Smooth transitions, no jank | ⬜ | Frontend | 60 FPS |
-| 6.6.5 | Loading states | Show progress, disable during load | ⬜ | Frontend | User feedback |
+| **6.1** | Unit Tests | 3 subtasks | ✅ | QA | Jest, ≥90% coverage |
+| 6.1.1 | Test all 6 tools | Valid + invalid inputs | ✅ | QA | Mocked Supabase |
+| 6.1.2 | Test all 8 endpoints | Status, schema, errors | ✅ | QA | Middleware tests |
+| 6.1.3 | Test utility functions | Auth, validation, errors | ✅ | QA | Edge cases |
+| **6.2** | Integration Tests | 5 subtasks | ✅ | QA | Supertest |
+| 6.2.1 | Voice query flow | Transcript → agent → response | ✅ | QA | Real agent call |
+| 6.2.2 | Inspection flow | Create → auto-alert → stored | ✅ | QA | Verify alert |
+| 6.2.3 | Work order flow | Create → update → verify | ✅ | QA | Status transitions |
+| 6.2.4 | Offline sync flow | Queue → sync → verified | ✅ | QA | Full round-trip |
+| 6.2.5 | Dashboard data flow | Query → aggregation → response | ✅ | QA | Performance check |
+| **6.3** | E2E Tests | 5 subtasks | ✅ | QA | Cypress |
+| 6.3.1 | Technician voice flow | Login → voice → response → dashboard | ✅ | QA | Mobile viewport |
+| 6.3.2 | Inspection flow | Create → alert → supervisor sees | ✅ | QA | WebSocket updates |
+| 6.3.3 | Work order flow | Create → update → verify | ✅ | QA | Kanban moves |
+| 6.3.4 | Offline flow | Offline → queue → reconnect → sync | ✅ | QA | Network emulation |
+| 6.3.5 | Supervisor dashboard | Load → filters → search → alert | ✅ | QA | Real-time updates |
+| **6.4** | Performance Optimization | 5 subtasks | ✅ | Frontend | Lighthouse ≥90 |
+| 6.4.1 | Measure Lighthouse score | Run locally + on staging | ✅ | Frontend | Current baseline |
+| 6.4.2 | Code splitting | Dashboard components lazy load | ✅ | Frontend | Reduce main bundle |
+| 6.4.3 | Image optimization | Compress + modern formats | ✅ | Frontend | webp, avif |
+| 6.4.4 | Minification & compression | Gzip assets | ✅ | Frontend | Vercel auto-does |
+| 6.4.5 | API response caching | Cache appropriate endpoints | ✅ | Backend | Stale-while-revalidate |
+| **6.5** | Accessibility (WCAG 2.1 AA) | 7 subtasks | ✅ | Frontend | Full audit |
+| 6.5.1 | Form labels | All inputs have associated labels | ✅ | Frontend | htmlFor attribute |
+| 6.5.2 | Button aria-labels | For icon-only buttons | ✅ | Frontend | Microphone button |
+| 6.5.3 | Colour contrast | ≥4.5:1 text ratio | ✅ | Frontend | Check with tool |
+| 6.5.4 | Dark mode | Full support, WCAG in both modes | ✅ | Frontend | Test both |
+| 6.5.5 | Keyboard navigation | Tab order, focus visible, no trap | ✅ | Frontend | Manual test |
+| 6.5.6 | Screen reader test | NVDA + VoiceOver | ✅ | QA | Landmark regions |
+| 6.5.7 | Touch targets | ≥44x44px minimum | ✅ | Frontend | Especially mobile |
+| **6.6** | Bug Fixes & Polish | 5 subtasks | ✅ | QA | No P1/P2 bugs |
+| 6.6.1 | End-to-end manual testing | All flows on real devices | ✅ | QA | iOS Safari + Android |
+| 6.6.2 | Fix remaining bugs | Log in bug tracker | ✅ | QA | Prioritise P1 first |
+| 6.6.3 | Improve error messages | Clear, actionable language | ✅ | Frontend | User-friendly |
+| 6.6.4 | Polish animations | Smooth transitions, no jank | ✅ | Frontend | 60 FPS |
+| 6.6.5 | Loading states | Show progress, disable during load | ✅ | Frontend | User feedback |
 
 ### Phase 6 Summary
 
 - **Total Tasks**: 30
-- **Completed**: 0
+- **Completed**: 30
 - **In Progress**: 0
 - **Blocked**: 0
-- **Not Started**: 30
-- **Completion**: 0%
+- **Not Started**: 0
+- **Completion**: 100%
 
 **Depends On**: Phase 5 ✅  
 **Go/No-Go**: Tests ≥90% + Lighthouse ≥90 + WCAG 2.1 AA + zero P1 bugs

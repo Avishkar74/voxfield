@@ -3,6 +3,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAgentTools } from "../agent-tools";
 import { getSystemPrompt } from "../agent-prompt";
 import type { AuthenticatedRequestUser } from "@/lib/api/middleware";
+import { processVoiceQuery } from "../agent";
+
+const mockCreate = vi.fn();
+
+vi.mock("openai", () => {
+  return {
+    default: vi.fn().mockImplementation(() => {
+      return {
+        chat: {
+          completions: {
+            create: mockCreate,
+          },
+        },
+      };
+    }),
+  };
+});
 
 describe("Agent Core", () => {
   const techUser: AuthenticatedRequestUser = {
@@ -101,52 +118,179 @@ describe("Agent Core", () => {
   });
 });
 
-// Since mocking openai.beta.chat.completions.runTools in Vitest is quite difficult due to the complex Runner class,
-// we add structural assertions here representing the intent and behavior tests
-describe("Agent Intent Classification & Workflow (Mocked Expectations)", () => {
-  it("should classify query intents to getEquipmentHistory", () => {
-    expect("What is the history of AC-101?").toBeTypeOf("string");
+// Real Integration Tests for processVoiceQuery
+describe("processVoiceQuery integration", () => {
+  const techUser: AuthenticatedRequestUser = {
+    id: "tech-1",
+    email: "tech@test.com",
+    role: "TECHNICIAN",
+    employeeCode: "T1",
+    fullName: "Tech One",
+  };
+
+  let mockSupabase: any;
+
+  beforeEach(() => {
+    mockSupabase = {
+      from: vi.fn(),
+      rpc: vi.fn(),
+    };
+    vi.clearAllMocks();
   });
-  it("should classify creation intents to createWorkOrder", () => {
-    expect("Create a critical work order").toBeTypeOf("string");
+
+  it("should process plain query without tool calls", async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: "Hello! I am your VoxField AI assistant. How can I help?",
+          },
+        },
+      ],
+    });
+
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: { transcriptId: "t-123", sessionId: "s-123" },
+      error: null,
+    });
+
+    const result = await processVoiceQuery(
+      mockSupabase,
+      techUser,
+      "hello there"
+    );
+
+    expect(result.agentResponse).toBe("Hello! I am your VoxField AI assistant. How can I help?");
+    expect(result.toolsUsed).toEqual([]);
+    expect(mockSupabase.rpc).toHaveBeenCalledWith("create_voice_transcript_tx", {
+      p_user_id: "tech-1",
+      p_user_prompt: "hello there",
+      p_session_id: expect.any(String),
+      p_tools_used: [],
+    });
   });
-  it("should enforce TECHNICIAN restrictions on assigning work orders", () => {
-    expect("Technician cannot reassign").toBeTypeOf("string");
+
+  it("should execute a tool call and iterate back to return final answer", async () => {
+    // 1st LLM call yields a tool call to getEquipmentHistory
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            tool_calls: [
+              {
+                id: "call-xyz",
+                type: "function",
+                function: {
+                  name: "getEquipmentHistory",
+                  arguments: '{"equipmentId":"eq-abc"}',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    // 2nd LLM call yields the final response text
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: "AC-101 has a history of compressor repair on June 15.",
+          },
+        },
+      ],
+    });
+
+    // Mock getEquipmentHistory Supabase call
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: [{ repair_date: "2023-06-15", failure_type: "Compressor failure" }],
+        error: null,
+      }),
+    });
+
+    // Mock voice transcript save
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: { transcriptId: "t-123", sessionId: "s-123" },
+      error: null,
+    });
+
+    const result = await processVoiceQuery(
+      mockSupabase,
+      techUser,
+      "history of AC-101"
+    );
+
+    expect(result.agentResponse).toBe("AC-101 has a history of compressor repair on June 15.");
+    expect(result.toolsUsed).toContain("getEquipmentHistory");
+    expect(mockSupabase.rpc).toHaveBeenCalledWith("create_voice_transcript_tx", {
+      p_user_id: "tech-1",
+      p_user_prompt: "history of AC-101",
+      p_session_id: expect.any(String),
+      p_tools_used: ["getEquipmentHistory"],
+    });
   });
-  it("should allow SUPERVISOR to reassign work orders", () => {
-    expect("Supervisor can reassign").toBeTypeOf("string");
-  });
-  it("should handle tool failures gracefully", () => {
-    expect("Tool failed, notify user").toBeTypeOf("string");
-  });
-  it("should extract equipmentId from text", () => {
-    expect("AC-101").toBeTypeOf("string");
-  });
-  it("should extract priority CRITICAL", () => {
-    expect("CRITICAL").toBeTypeOf("string");
-  });
-  it("should correctly update statuses to IN_PROGRESS", () => {
-    expect("IN_PROGRESS").toBeTypeOf("string");
-  });
-  it("should return TTS-safe responses", () => {
-    expect("No markdown").toBeTypeOf("string");
-  });
-  it("should respond in under 50 words", () => {
-    expect("Length < 50").toBeTypeOf("string");
-  });
-  it("should call createVoiceTranscript to log the session", () => {
-    expect("Transcript saved").toBeTypeOf("string");
-  });
-  it("should handle missing tool parameters by asking clarification", () => {
-    expect("Ask clarification").toBeTypeOf("string");
-  });
-  it("should execute createAlert manually if needed", () => {
-    expect("Alert created").toBeTypeOf("string");
-  });
-  it("should automatically resolve alert generation from CRITICAL inspections", () => {
-    expect("Alert from inspection").toBeTypeOf("string");
-  });
-  it("should format timestamps safely", () => {
-    expect("Valid ISO string").toBeTypeOf("string");
+
+  it("should handle tool execution failure gracefully", async () => {
+    // 1st LLM call yields a tool call to getEquipmentHistory
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            tool_calls: [
+              {
+                id: "call-err",
+                type: "function",
+                function: {
+                  name: "getEquipmentHistory",
+                  arguments: '{"equipmentId":"eq-abc"}',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    // 2nd LLM call yields final text
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: "Sorry, I encountered an error checking the history.",
+          },
+        },
+      ],
+    });
+
+    // Simulate database failure for getEquipmentHistory
+    mockSupabase.from.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: null,
+        error: new Error("DB Connection Lost"),
+      }),
+    });
+
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: { transcriptId: "t-123", sessionId: "s-123" },
+      error: null,
+    });
+
+    const result = await processVoiceQuery(
+      mockSupabase,
+      techUser,
+      "history of AC-101"
+    );
+
+    expect(result.agentResponse).toBe("Sorry, I encountered an error checking the history.");
+    expect(result.toolsUsed).toContain("getEquipmentHistory");
   });
 });
+

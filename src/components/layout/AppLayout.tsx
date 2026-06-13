@@ -5,7 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mic, LayoutDashboard, Settings, LogOut, Bell } from "lucide-react";
 import { AuthenticatedRequestUser } from "@/lib/api/middleware";
-import { OfflineStatus } from "@/components/dashboard/OfflineStatus";
+import dynamic from "next/dynamic";
+
+const OfflineStatus = dynamic(
+  () => import("@/components/dashboard/OfflineStatus").then((m) => m.OfflineStatus),
+  { ssr: false }
+);
 
 interface AppLayoutProps {
   children: ReactNode;

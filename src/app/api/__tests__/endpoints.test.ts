@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { POST as createInspection } from "@/app/api/inspections/create/route";
 import { POST as createWorkOrder } from "@/app/api/work-orders/create/route";
 import { PATCH as updateWorkOrder } from "@/app/api/work-orders/[id]/route";
@@ -8,7 +8,36 @@ import { POST as voiceQuery } from "@/app/api/voice-query/route";
 import { POST as syncQueue } from "@/app/api/sync-offline-queue/route";
 import { GET as techDashboard } from "@/app/api/dashboard/technician/route";
 import { GET as supDashboard } from "@/app/api/dashboard/supervisor/route";
+import { POST as sttEndpoint } from "@/app/api/stt/route";
+import { POST as ttsEndpoint } from "@/app/api/tts/route";
 import { requireAuth } from "@/lib/api/middleware";
+
+const { mockTranscribe, mockSpeechCreate } = vi.hoisted(() => ({
+  mockTranscribe: vi.fn(),
+  mockSpeechCreate: vi.fn(),
+}));
+
+vi.mock("assemblyai", () => {
+  return {
+    AssemblyAI: vi.fn().mockImplementation(() => ({
+      transcripts: {
+        transcribe: mockTranscribe,
+      },
+    })),
+  };
+});
+
+vi.mock("openai", () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      audio: {
+        speech: {
+          create: mockSpeechCreate,
+        },
+      },
+    })),
+  };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({}),
@@ -40,6 +69,7 @@ vi.mock("@/lib/api/middleware", async (importOriginal) => {
     }),
   };
 });
+
 
 describe("API Endpoints", () => {
   beforeEach(() => {
@@ -148,4 +178,42 @@ describe("API Endpoints", () => {
     const res = await supDashboard(req, {});
     expect(res.status).toBe(200);
   });
+
+  it("POST /api/stt returns transcribed text", async () => {
+    mockTranscribe.mockResolvedValueOnce({
+      status: "completed",
+      text: "Turn off generator 1",
+      confidence: 0.95,
+    });
+
+    const formData = new FormData();
+    formData.append("audio", new Blob(["audio content"], { type: "audio/webm" }));
+
+    const req = new NextRequest("http://localhost/api/stt", {
+      method: "POST",
+      body: formData,
+    });
+
+    const res = await sttEndpoint(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.text).toBe("Turn off generator 1");
+    expect(json.confidence).toBe(0.95);
+  });
+
+  it("POST /api/tts returns mpeg audio buffer", async () => {
+    mockSpeechCreate.mockResolvedValueOnce({
+      arrayBuffer: async () => new ArrayBuffer(10),
+    });
+
+    const req = new NextRequest("http://localhost/api/tts", {
+      method: "POST",
+      body: JSON.stringify({ text: "Hello supervisor" }),
+    });
+
+    const res = await ttsEndpoint(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("audio/mpeg");
+  });
 });
+

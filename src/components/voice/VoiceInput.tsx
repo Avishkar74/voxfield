@@ -123,6 +123,7 @@ export function VoiceInput() {
         whileTap={{ scale: 0.95 }}
         onClick={handleToggle}
         disabled={agentState === "PROCESSING" || agentState === "SPEAKING"}
+        aria-label="Toggle Voice Assistant"
         className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors ${
           agentState === "LISTENING"
             ? "bg-red-500 hover:bg-red-600 text-white"

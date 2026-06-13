@@ -3,7 +3,12 @@ import { getTechnicianDashboard } from "@/services/phase2.service";
 import { VoiceInput } from "@/components/voice/VoiceInput";
 import { WorkOrdersList } from "@/components/dashboard/WorkOrdersList";
 import { InspectionsList } from "@/components/dashboard/InspectionsList";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import dynamic from "next/dynamic";
+
+const ActivityFeed = dynamic(
+  () => import("@/components/dashboard/ActivityFeed").then((m) => m.ActivityFeed),
+  { ssr: false }
+);
 import { createClient } from "@/lib/supabase/server";
 
 export default async function TechnicianDashboardPage() {
