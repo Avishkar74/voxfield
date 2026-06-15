@@ -28,7 +28,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
-  signIn: (input: SignInInput) => Promise<void>;
+  signIn: (input: SignInInput) => Promise<{ user: AuthUser | null }>;
   signUp: (input: SignUpInput) => Promise<{ requiresEmailConfirmation: boolean }>;
   signOut: () => Promise<void>;
   clearError: () => void;
@@ -143,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const session = await signInWithEmail(supabase, input);
         setUser(session.user);
+        return { user: session.user };
       } catch (err) {
         const message = isAppError(err)
           ? err.message

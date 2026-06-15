@@ -1,55 +1,59 @@
 "use client";
 
-import { MessageSquare, Mic } from "lucide-react";
-
-interface Transcript {
-  id: string;
-  user_prompt: string;
-  agent_response: string;
-  created_at: string;
-}
-
+import { MessageSquare, Mic, User } from "lucide-react";
+import type { Transcript } from "@/types/database";
 import { FormattedDate } from "./FormattedDate";
 
 export function TranscriptLog({ transcripts }: { transcripts: Transcript[] }) {
   if (!transcripts || transcripts.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 text-center">
-        <MessageSquare className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-        <h3 className="text-gray-900 dark:text-gray-100 text-sm font-medium">No Voice Interactions</h3>
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 text-center">
+        <MessageSquare className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+        <h3 className="text-gray-900 font-bold text-sm">No Voice Interactions</h3>
+        <p className="text-gray-500 text-xs mt-1">Transcripts will populate when voice assistant queries are made.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-sm">
-          <Mic className="w-4 h-4 text-blue-500" />
-          Recent Voice Interactions
+    <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden h-full">
+      <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+        <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-[#D14923]" />
+          Transcript Monitoring
         </h2>
+        <button className="text-[#D14923] hover:text-[#B73D1C] text-xs font-bold transition">
+          View all
+        </button>
       </div>
-      <div className="divide-y divide-gray-50 dark:divide-gray-800/50 max-h-96 overflow-y-auto p-4 space-y-4">
+
+      <div className="p-6 space-y-6 max-h-[420px] overflow-y-auto bg-gray-50">
         {transcripts.map((t) => (
-          <div key={t.id} className="pt-4 first:pt-0">
-            <div className="flex gap-3 mb-2">
-              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-bold text-gray-500">U</span>
+          <div key={t.id} className="space-y-3 border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
+            {/* User prompt balloon */}
+            <div className="flex items-start space-x-3">
+              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center shrink-0 border border-gray-300">
+                <User className="w-3.5 h-3.5 text-gray-600" />
               </div>
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-gray-800 dark:text-gray-200 w-fit max-w-[85%]">
-                {t.user_prompt}
-              </div>
-            </div>
-            <div className="flex gap-3 flex-row-reverse">
-              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
-                <Mic className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="bg-blue-600 dark:bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm w-fit max-w-[85%]">
-                {t.agent_response}
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-gray-800 font-medium shadow-sm max-w-[85%]">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Technician Query</p>
+                <p className="italic">"{t.user_prompt}"</p>
               </div>
             </div>
-            <div className="text-center mt-2">
-              <span className="text-[10px] text-gray-400">
+
+            {/* Agent response balloon */}
+            <div className="flex items-start flex-row-reverse space-x-reverse space-x-3">
+              <div className="w-7 h-7 rounded-full bg-[#FAF0ED] flex items-center justify-center shrink-0 border border-[#FAF0ED]">
+                <Mic className="w-3.5 h-3.5 text-[#D14923]" />
+              </div>
+              <div className="bg-[#1C1A17] text-white border border-[#1C1A17] rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm font-medium shadow-sm max-w-[85%]">
+                <p className="text-[10px] font-bold text-[#D14923] uppercase tracking-wider mb-0.5">VoxField AI</p>
+                <p>{t.agent_response}</p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <span className="text-[9px] font-semibold text-gray-400">
                 <FormattedDate date={t.created_at} includeTime={true} />
               </span>
             </div>

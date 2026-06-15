@@ -1,38 +1,89 @@
 "use client";
 
-import { Activity, ClipboardList, FileSearch, AlertTriangle } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle2, FileSearch, AlertTriangle, Calendar } from "lucide-react";
 
 interface KPIData {
-  activeWorkOrders: number;
-  recentInspections: number;
-  criticalAlerts: number;
-  voiceQueries: number;
+  openWorkOrders: number;
+  inProgressWorkOrders: number;
+  completedWorkOrders: number;
+  inspectionsCompleted: number;
+  highPriorityAlerts: number;
 }
 
 export function KPICards({ data }: { data: KPIData }) {
   const cards = [
-    { label: "Active Orders", value: data.activeWorkOrders, icon: ClipboardList, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-900/20" },
-    { label: "Inspections", value: data.recentInspections, icon: FileSearch, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-900/20" },
-    { label: "Critical Alerts", value: data.criticalAlerts, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-900/20" },
-    { label: "Voice Interactions", value: data.voiceQueries, icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+    { 
+      label: "Open Work Orders", 
+      value: data.openWorkOrders, 
+      icon: ClipboardList, 
+      color: "text-blue-600 bg-blue-50 border-blue-100" 
+    },
+    { 
+      label: "In Progress", 
+      value: data.inProgressWorkOrders, 
+      icon: Clock, 
+      color: "text-orange-600 bg-orange-50 border-orange-100" 
+    },
+    { 
+      label: "Completed Orders", 
+      value: data.completedWorkOrders, 
+      icon: CheckCircle2, 
+      color: "text-green-600 bg-green-50 border-green-100" 
+    },
+    { 
+      label: "Inspections Recorded", 
+      value: data.inspectionsCompleted, 
+      icon: FileSearch, 
+      color: "text-purple-600 bg-purple-50 border-purple-100" 
+    },
+    { 
+      label: "High Priority Alerts", 
+      value: data.highPriorityAlerts, 
+      icon: AlertTriangle, 
+      color: "text-red-600 bg-red-50 border-red-100" 
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {cards.map((card, i) => {
-        const Icon = card.icon;
-        return (
-          <div key={i} className="bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
-              <Icon className={`w-6 h-6 ${card.color}`} />
+    <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 space-y-6">
+      {/* Header with calendar filter */}
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-gray-900 text-base">
+          Overview
+        </h2>
+        <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 cursor-pointer hover:bg-gray-100 transition">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          <span>Active Period</span>
+        </div>
+      </div>
+
+      {/* Grid containing 5 cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {cards.map((card, i) => {
+          const Icon = card.icon;
+          return (
+            <div 
+              key={i} 
+              className="bg-[#FAF9F5] border border-gray-100 hover:border-[#D14923]/20 rounded-2xl p-5 transition flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  {card.label}
+                </span>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${card.color}`}>
+                  <Icon className="w-4.5 h-4.5" />
+                </div>
+              </div>
+              <div>
+                <p className="text-3xl font-extrabold text-gray-950 leading-none">
+                  {card.value}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-2 font-medium">Real-time sync</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-none">{card.value}</p>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">{card.label}</p>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

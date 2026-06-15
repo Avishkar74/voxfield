@@ -36,10 +36,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isDashboardRoute = pathname.startsWith("/dashboard");
+  const isProtectedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/technician") ||
+    pathname.startsWith("/supervisor");
   const isAuthRoute = pathname === "/login";
 
-  if (!user && isDashboardRoute) {
+  if (!user && isProtectedRoute) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirectTo", pathname);
@@ -48,7 +51,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
+    dashboardUrl.pathname = "/technician";
     return NextResponse.redirect(dashboardUrl);
   }
 

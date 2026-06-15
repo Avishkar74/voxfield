@@ -14,22 +14,52 @@ export function useVoiceAgent() {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const playbackAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Ensure AudioContext is created and resumed (must be called from a user gesture) */
+  const ensureAudioContext = async (): Promise<AudioContext> => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioContextRef.current;
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+    return ctx;
+  };
+
+  /** Play raw ArrayBuffer audio via Web Audio API — bypasses autoplay restrictions */
+  const playAudioBuffer = async (arrayBuffer: ArrayBuffer): Promise<void> => {
+    const ctx = await ensureAudioContext();
+    const decoded = await ctx.decodeAudioData(arrayBuffer);
+    const source = ctx.createBufferSource();
+    source.buffer = decoded;
+    source.connect(ctx.destination);
+    setAgentState("SPEAKING");
+    return new Promise((resolve) => {
+      source.onended = () => {
+        setAgentState("IDLE");
+        resolve();
+      };
+      source.start(0);
+    });
+  };
 
   const startListening = useCallback(async () => {
     try {
       setError(null);
       setTranscript("");
       setAgentResponse("");
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
 
-      audioContextRef.current = audioContext;
+      // Create / resume AudioContext on user gesture so TTS can play later
+      await ensureAudioContext();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Wire microphone → analyser for waveform visualisation
+      const analyser = audioContextRef.current!.createAnalyser();
+      analyser.fftSize = 256;
+      const source = audioContextRef.current!.createMediaStreamSource(stream);
+      source.connect(analyser);
       analyserRef.current = analyser;
 
       const mediaRecorder = new MediaRecorder(stream);
@@ -43,7 +73,8 @@ export function useVoiceAgent() {
       };
 
       mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
+        analyserRef.current = null; // Stop waveform after recording
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         await processAudioBlob(audioBlob);
       };
@@ -54,6 +85,7 @@ export function useVoiceAgent() {
       setError(err.message || "Microphone access denied");
       setAgentState("ERROR");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopListening = useCallback(() => {
@@ -65,7 +97,7 @@ export function useVoiceAgent() {
 
   const processAudioBlob = async (audioBlob: Blob) => {
     try {
-      // 1. STT (Speech to Text)
+      // 1. STT — transcribe audio
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
 
@@ -76,8 +108,13 @@ export function useVoiceAgent() {
 
       if (!sttRes.ok) throw new Error("Transcription failed");
       const sttData = await sttRes.json();
-      
+
       const text = sttData.text;
+      if (!text) {
+        setAgentResponse("I didn't hear anything. Please try again.");
+        setAgentState("IDLE");
+        return;
+      }
       setTranscript(text);
 
       if (sttData.confidence && sttData.confidence < 0.6) {
@@ -98,7 +135,7 @@ export function useVoiceAgent() {
       const reply = queryData.data.agentResponse;
       setAgentResponse(reply);
 
-      // 3. TTS (Text to Speech)
+      // 3. TTS — synthesize and play
       const ttsRes = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -106,26 +143,52 @@ export function useVoiceAgent() {
       });
 
       if (!ttsRes.ok) throw new Error("Text-to-speech failed");
-      
-      const audioBlobRes = await ttsRes.blob();
-      const audioUrl = URL.createObjectURL(audioBlobRes);
-      
-      const audio = new Audio(audioUrl);
-      playbackAudioRef.current = audio;
-      
-      audio.onplay = () => setAgentState("SPEAKING");
-      audio.onended = () => setAgentState("IDLE");
-      audio.onerror = () => {
-        setError("Audio playback failed");
-        setAgentState("ERROR");
-      };
-      
-      await audio.play();
+      const arrayBuffer = await ttsRes.arrayBuffer();
+      await playAudioBuffer(arrayBuffer);
     } catch (err: any) {
       setError(err.message || "An error occurred");
       setAgentState("ERROR");
     }
   };
+
+  const submitTextQuery = useCallback(async (text: string) => {
+    try {
+      setError(null);
+      setTranscript(text);
+      setAgentResponse("");
+      setAgentState("PROCESSING");
+
+      // Ensure AudioContext is running — we ARE in a user gesture here
+      await ensureAudioContext();
+
+      // 1. Query Agent
+      const queryRes = await fetch("/api/voice-query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userPrompt: text }),
+      });
+
+      if (!queryRes.ok) throw new Error("Agent processing failed");
+      const queryData = await queryRes.json();
+      const reply = queryData.data.agentResponse;
+      setAgentResponse(reply);
+
+      // 2. TTS — synthesize and play
+      const ttsRes = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: reply }),
+      });
+
+      if (!ttsRes.ok) throw new Error("Text-to-speech failed");
+      const arrayBuffer = await ttsRes.arrayBuffer();
+      await playAudioBuffer(arrayBuffer);
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+      setAgentState("ERROR");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getAnalyser = useCallback(() => {
     return analyserRef.current;
@@ -138,6 +201,7 @@ export function useVoiceAgent() {
     error,
     startListening,
     stopListening,
+    submitTextQuery,
     getAnalyser,
   };
 }

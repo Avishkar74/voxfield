@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ServiceWorkerRegister } from "@/components/voice/ServiceWorkerRegister";
+import { Providers } from "@/app/providers";
 
 import "./globals.css";
 
@@ -36,8 +37,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#2563eb" />
       </head>
       <body className="min-h-full flex flex-col">
-        {children}
-        <ServiceWorkerRegister />
+        <Providers>
+          {children}
+          <ServiceWorkerRegister />
+        </Providers>
       </body>
     </html>
   );

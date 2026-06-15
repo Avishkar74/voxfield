@@ -6,6 +6,8 @@ import { InspectionsList } from "@/components/dashboard/InspectionsList";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function TechnicianDashboardPage() {
   const user = await requireAuth();
   requireRole(user, ["TECHNICIAN"]);
@@ -14,26 +16,33 @@ export default async function TechnicianDashboardPage() {
   const data = await getTechnicianDashboard(supabase, user);
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto md:max-w-none md:grid md:grid-cols-12 md:gap-6 md:space-y-0">
-      <div className="md:col-span-7 lg:col-span-8 space-y-6">
-        <section className="mb-8">
-          <h2 className="text-xl font-bold mb-4">Voice Assistant</h2>
-          <VoiceInput />
-        </section>
+    <div className="space-y-6">
+      {/* Voice Assistant Panel - Full Width */}
+      <section id="dashboard" className="w-full">
+        <VoiceInput />
+      </section>
 
-        <section>
-          <WorkOrdersList workOrders={data.workOrders} />
-        </section>
-      </div>
-
-      <div className="md:col-span-5 lg:col-span-4 space-y-6">
-        <section>
-          <InspectionsList inspections={data.inspections} />
-        </section>
+      {/* Main Grid for Orders, Inspections, and Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        <section>
-          <ActivityFeed logs={data.activityLogs} />
-        </section>
+        {/* Left Column - Work Orders & Inspections */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+          <section id="work-orders">
+            <WorkOrdersList workOrders={data.workOrders} />
+          </section>
+
+          <section id="inspections">
+            <InspectionsList inspections={data.inspections} />
+          </section>
+        </div>
+
+        {/* Right Column - Recent Activity */}
+        <div className="lg:col-span-5 xl:col-span-4">
+          <section id="activity">
+            <ActivityFeed logs={data.activityLogs} />
+          </section>
+        </div>
+
       </div>
     </div>
   );

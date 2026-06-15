@@ -34,7 +34,7 @@ export function LoginForm() {
     setSuccessMessage(null);
     clearError();
 
-    const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+    const redirectTo = searchParams.get("redirectTo");
 
     try {
       if (mode === "sign-in") {
@@ -45,8 +45,15 @@ export function LoginForm() {
           return;
         }
 
-        await signIn(parsed.data);
-        router.replace(redirectTo);
+        const { user: signedInUser } = await signIn(parsed.data);
+        // Use full page navigation to ensure the new session cookie is sent
+        // with the first request — router.replace() won't send the new cookie.
+        const destination = redirectTo && redirectTo !== "/dashboard"
+          ? redirectTo
+          : signedInUser?.role === "SUPERVISOR"
+          ? "/supervisor"
+          : "/technician";
+        window.location.href = destination;
         return;
       }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { FileSearch, AlertTriangle } from "lucide-react";
+import { FileSearch, ChevronRight, AlertTriangle } from "lucide-react";
+import { FormattedDate } from "./FormattedDate";
 
 interface Inspection {
   id: string;
@@ -10,51 +11,60 @@ interface Inspection {
   created_at: string;
 }
 
-import { FormattedDate } from "./FormattedDate";
-
 export function InspectionsList({ inspections }: { inspections: Inspection[] }) {
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case "CRITICAL": return "bg-red-500 text-white";
-      case "HIGH": return "bg-orange-500 text-white";
-      case "MEDIUM": return "bg-yellow-400 text-yellow-900";
-      default: return "bg-green-500 text-white";
-    }
-  };
-
   if (!inspections || inspections.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 text-center">
-        <FileSearch className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-        <h3 className="text-gray-900 dark:text-gray-100 text-sm font-medium">No Recent Inspections</h3>
+      <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6 text-center">
+        <FileSearch className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+        <h3 className="text-gray-900 font-bold text-sm">No Inspections Recorded</h3>
+        <p className="text-gray-500 text-xs mt-1">Submit your first inspection report using the voice assistant.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-sm">
-          <FileSearch className="w-4 h-4 text-purple-500" />
-          Recent Inspections
+    <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+      <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+        <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+          <FileSearch className="w-5 h-5 text-[#D14923]" />
+          Inspections Recorded
         </h2>
+        <button className="text-[#D14923] hover:text-[#B73D1C] text-xs font-bold transition">
+          View all
+        </button>
       </div>
-      <div className="divide-y divide-gray-50 dark:divide-gray-800/50 max-h-64 overflow-y-auto">
+      
+      <div className="divide-y divide-gray-100">
         {inspections.map((ins) => (
-          <div key={ins.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex justify-between items-center">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
+          <div 
+            key={ins.id} 
+            className="p-4 flex items-center justify-between hover:bg-[#FAF9F5] transition duration-200 cursor-pointer group"
+          >
+            <div className="flex-1 min-w-0 pr-4">
+              <h3 className="text-sm font-semibold text-gray-800 truncate group-hover:text-[#D14923] transition-colors">
                 {ins.title}
-              </p>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                <FormattedDate date={ins.created_at} includeTime={false} />
+              </h3>
+              <p className="text-xs text-gray-400 mt-1 flex items-center space-x-1.5">
+                <span>Created:</span>
+                <span className="font-medium text-gray-500">
+                  <FormattedDate date={ins.created_at} includeTime={false} />
+                </span>
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {ins.severity === "CRITICAL" && <AlertTriangle className="w-3 h-3 text-red-500 animate-pulse" />}
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getSeverityBadge(ins.severity)}`}>
+            
+            <div className="flex items-center space-x-3 flex-shrink-0">
+              <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                ins.severity === "CRITICAL"
+                  ? "bg-red-50 text-red-600 border-red-100"
+                  : ins.severity === "HIGH"
+                  ? "bg-orange-50 text-orange-600 border-orange-100"
+                  : ins.severity === "MEDIUM"
+                  ? "bg-yellow-50 text-yellow-600 border-yellow-100"
+                  : "bg-green-50 text-green-600 border-green-100"
+              }`}>
                 {ins.severity}
               </span>
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </div>
         ))}

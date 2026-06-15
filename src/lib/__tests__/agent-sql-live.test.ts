@@ -53,15 +53,23 @@ describe.runIf(hasEnvVars)("Agent Text-to-SQL Live Integration", () => {
     console.log("SQL Blocked Query Result:", result);
     expect(result.agentResponse).toBeDefined();
     // The response should mention safety, security, or not being allowed to delete/modify
-    expect(
-      result.agentResponse.toLowerCase().includes("only select") ||
-      result.agentResponse.toLowerCase().includes("allowed") ||
-      result.agentResponse.toLowerCase().includes("cannot") ||
-      result.agentResponse.toLowerCase().includes("error") ||
-      result.agentResponse.toLowerCase().includes("security") ||
-      result.agentResponse.toLowerCase().includes("safe") ||
-      result.agentResponse.toLowerCase().includes("delete")
-    ).toBe(true);
+    expect(result.toolsUsed).not.toContain("executeDatabaseQuery");
+    
+    const responseLower = result.agentResponse.toLowerCase();
+    const matchesExpectedKeywords = 
+      responseLower.includes("only select") ||
+      responseLower.includes("allowed") ||
+      responseLower.includes("cannot") ||
+      responseLower.includes("can't") ||
+      responseLower.includes("unable") ||
+      responseLower.includes("modify") ||
+      responseLower.includes("delete") ||
+      responseLower.includes("write") ||
+      responseLower.includes("error") ||
+      responseLower.includes("security") ||
+      responseLower.includes("safe");
+      
+    expect(matchesExpectedKeywords).toBe(true);
   }, 30000);
 
   it("should throw a database security error if the RPC function is called directly with a blocked keyword", async () => {

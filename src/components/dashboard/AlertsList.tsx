@@ -1,60 +1,67 @@
 "use client";
 
-import { AlertTriangle, Info, BellRing } from "lucide-react";
+import { AlertTriangle, Info, ChevronRight } from "lucide-react";
+import type { Alert } from "@/types/database";
 
-interface Alert {
-  id: string;
-  equipment_id: string;
-  severity: string;
-  message: string;
-  status: string;
-  created_at: string;
-}
+export function AlertsList({ alerts = [] }: { alerts: Alert[] }) {
+  // Compute real counts from the actual database alerts passed in
+  const highCount = alerts.filter(a => a.severity === "CRITICAL" || a.severity === "HIGH").length;
+  const mediumCount = alerts.filter(a => (a.severity as string) === "MEDIUM").length;
+  const lowCount = alerts.filter(a => (a.severity as string) === "LOW").length;
 
-import { FormattedDate } from "./FormattedDate";
-
-export function AlertsList({ alerts }: { alerts: Alert[] }) {
-  if (!alerts || alerts.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 text-center">
-        <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Info className="w-6 h-6 text-green-500" />
-        </div>
-        <h3 className="text-gray-900 dark:text-gray-100 text-sm font-medium">No Active Alerts</h3>
-        <p className="text-xs text-gray-500 mt-1">System is operating normally.</p>
-      </div>
-    );
-  }
+  const categories = [
+    {
+      name: "High Priority",
+      count: highCount,
+      color: "text-red-600 bg-red-50 border-red-100",
+      icon: <AlertTriangle className="w-4 h-4 text-red-600" />
+    },
+    {
+      name: "Medium Priority",
+      count: mediumCount,
+      color: "text-orange-600 bg-orange-50 border-orange-100",
+      icon: <AlertTriangle className="w-4 h-4 text-orange-600" />
+    },
+    {
+      name: "Informational",
+      count: lowCount,
+      color: "text-blue-600 bg-blue-50 border-blue-100",
+      icon: <Info className="w-4 h-4 text-blue-600" />
+    }
+  ];
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-sm">
-          <BellRing className="w-4 h-4 text-red-500" />
-          Active Alerts
+    <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden h-full">
+      <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+        <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-[#D14923]" />
+          Alerts Summary
         </h2>
-        <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
-          {alerts.length}
-        </span>
+        <button className="text-[#D14923] hover:text-[#B73D1C] text-xs font-bold transition">
+          View all
+        </button>
       </div>
-      <div className="divide-y divide-gray-50 dark:divide-gray-800/50 max-h-64 overflow-y-auto">
-        {alerts.map((alert) => (
-          <div key={alert.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex gap-3 items-start">
-            <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-orange-100 text-orange-600'}`}>
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {alert.message}
-              </p>
-              <div className="flex gap-2 items-center mt-1">
-                <span className={`text-[10px] font-bold px-1.5 rounded ${alert.severity === 'CRITICAL' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
-                  {alert.severity}
-                </span>
-                <span className="text-[10px] text-gray-500">
-                  <FormattedDate date={alert.created_at} includeTime={true} />
-                </span>
+
+      <div className="divide-y divide-gray-100">
+        {categories.map((cat) => (
+          <div 
+            key={cat.name} 
+            className="p-5 flex items-center justify-between hover:bg-[#FAF9F5] transition duration-200 cursor-pointer group"
+          >
+            <div className="flex items-center space-x-4">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border ${cat.color}`}>
+                {cat.icon}
               </div>
+              <span className="text-sm font-semibold text-gray-800">
+                {cat.name}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <span className="text-sm font-extrabold text-gray-900">
+                {cat.count}
+              </span>
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </div>
         ))}

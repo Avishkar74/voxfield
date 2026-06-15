@@ -8,6 +8,8 @@ import { TranscriptLog } from "@/components/dashboard/TranscriptLog";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function SupervisorDashboardPage() {
   const user = await requireAuth();
   requireRole(user, ["SUPERVISOR"]);
@@ -16,45 +18,58 @@ export default async function SupervisorDashboardPage() {
   const data = await getSupervisorDashboard(supabase, user);
 
   const kpiData = {
-    activeWorkOrders: data.counts.openWorkOrders + data.counts.inProgressWorkOrders,
-    recentInspections: data.counts.inspections,
-    criticalAlerts: data.alerts.filter((a) => a.severity === "CRITICAL").length,
-    voiceQueries: data.transcripts.length,
+    openWorkOrders: data.counts.openWorkOrders,
+    inProgressWorkOrders: data.counts.inProgressWorkOrders,
+    completedWorkOrders: data.counts.closedWorkOrders,
+    inspectionsCompleted: data.counts.inspections,
+    highPriorityAlerts: data.alerts.filter(
+      (a) => a.severity === "CRITICAL" || a.severity === "HIGH"
+    ).length,
   };
 
   return (
-    <div className="space-y-6">
-      <KPICards data={kpiData} />
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      {/* Left Column (Wider): Voice assistant, KPIs, and Transcripts */}
+      <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+        
+        {/* Voice Assistant */}
+        <section id="dashboard">
+          <VoiceInput />
+        </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-          <section>
-            <h2 className="text-lg font-bold mb-4">Work Orders</h2>
-            <WorkOrdersKanban workOrders={data.workOrders} />
-          </section>
+        {/* Overview KPIs */}
+        <section id="reports">
+          <KPICards data={kpiData} />
+        </section>
 
-          <section>
-            <TranscriptLog transcripts={data.transcripts} />
-          </section>
-        </div>
+        {/* Transcript Monitoring */}
+        <section id="transcripts">
+          <TranscriptLog transcripts={data.transcripts} />
+        </section>
 
-        <div className="space-y-6">
-          <section>
-            <h2 className="text-lg font-bold mb-4 flex items-center justify-between">
-              Global Voice Assistant
-            </h2>
-            <VoiceInput />
-          </section>
-
-          <section>
-            <AlertsList alerts={data.alerts} />
-          </section>
-
-          <section>
-            <ActivityFeed logs={data.activityLogs} />
-          </section>
-        </div>
       </div>
+
+      {/* Right Column (Narrower): Alerts, Active Work Orders, and Recent Activity */}
+      <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+        
+        {/* Alerts Summary */}
+        <section id="alerts">
+          <AlertsList alerts={data.alerts} />
+        </section>
+
+        {/* Active Work Orders */}
+        <section id="work-orders">
+          <WorkOrdersKanban workOrders={data.workOrders} />
+        </section>
+
+        {/* Recent Activity */}
+        <section id="activity">
+          <ActivityFeed logs={data.activityLogs} />
+        </section>
+
+      </div>
+
     </div>
   );
 }
