@@ -172,7 +172,18 @@ describe("API Endpoints", () => {
   it("GET /api/dashboard/supervisor returns 200 for supervisor", async () => {
     vi.mocked(requireAuth).mockResolvedValue({ id: "1", role: "SUPERVISOR" } as any);
     const { getSupervisorDashboard: mockService } = await import("@/services/operations.service");
-    vi.mocked(mockService).mockResolvedValue({ user: {} as any, counts: {} as any, workOrders: [], inspections: [], alerts: [], transcripts: [], activityLogs: [] });
+    vi.mocked(mockService).mockResolvedValue({
+      user: {} as any,
+      counts: {} as any,
+      workOrders: [],
+      inspections: [],
+      alerts: [],
+      transcripts: [],
+      activityLogs: [],
+      technicians: [],
+      equipment: [],
+      repairHistory: [],
+    });
 
     const req = createRequest();
     const res = await supDashboard(req, {});

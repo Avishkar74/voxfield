@@ -29,6 +29,7 @@ import type {
   ActivityLog,
   Alert,
   Database,
+  Equipment,
   InspectionReport,
   RepairHistory,
   Transcript,
@@ -112,12 +113,16 @@ export interface SupervisorDashboardResult {
     resolvedAlerts: number;
     transcripts: number;
     activityLogs: number;
+    activeTechnicians: number;
   };
   workOrders: WorkOrder[];
   inspections: InspectionReport[];
   alerts: Alert[];
   transcripts: Transcript[];
   activityLogs: ActivityLog[];
+  technicians: User[];
+  equipment: Equipment[];
+  repairHistory: RepairHistory[];
 }
 
 const VOICE_PLACEHOLDER_RESPONSE =
@@ -684,30 +689,89 @@ export async function getSupervisorDashboard(
   supabase: SupabaseClient<Database>,
   currentUser: AuthenticatedRequestUser,
 ): Promise<SupervisorDashboardResult> {
-  const [workOrdersResult, inspectionsResult, alertsResult, transcriptsResult, logsResult] =
-    await Promise.all([
-      supabase.from("work_orders").select("*").order("created_at", { ascending: false }).limit(20),
-      supabase.from("inspection_reports").select("*").order("created_at", { ascending: false }).limit(20),
-      supabase.from("alerts").select("*").order("created_at", { ascending: false }).limit(20),
-      supabase.from("transcripts").select("*").neq("agent_response", "Voice agent is not available yet. Your request was recorded and will be handled once Phase 3 is enabled.").order("created_at", { ascending: false }).limit(20),
-      supabase.from("activity_logs").select("*").neq("description", "Stored a placeholder voice query response").order("created_at", { ascending: false }).limit(20),
-    ]);
+  const [
+    workOrdersResult,
+    inspectionsResult,
+    alertsResult,
+    transcriptsResult,
+    logsResult,
+    usersResult,
+    equipmentResult,
+    repairHistoryResult,
+  ] = await Promise.all([
+    supabase.from("work_orders").select("*").order("created_at", { ascending: false }).limit(100),
+    supabase.from("inspection_reports").select("*").order("created_at", { ascending: false }).limit(100),
+    supabase.from("alerts").select("*").order("created_at", { ascending: false }).limit(100),
+    supabase
+      .from("transcripts")
+      .select("*")
+      .neq(
+        "agent_response",
+        "Voice agent is not available yet. Your request was recorded and will be handled once Phase 3 is enabled."
+      )
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("activity_logs")
+      .select("*")
+      .neq("description", "Stored a placeholder voice query response")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase.from("users").select("*").eq("role", "TECHNICIAN"),
+    supabase.from("equipment").select("*").limit(100),
+    supabase.from("repair_history").select("*").order("repair_date", { ascending: false }).limit(100),
+  ]);
 
   if (workOrdersResult.error) throw new ValidationError(workOrdersResult.error.message);
   if (inspectionsResult.error) throw new ValidationError(inspectionsResult.error.message);
   if (alertsResult.error) throw new ValidationError(alertsResult.error.message);
   if (transcriptsResult.error) throw new ValidationError(transcriptsResult.error.message);
   if (logsResult.error) throw new ValidationError(logsResult.error.message);
+  if (usersResult.error) throw new ValidationError(usersResult.error.message);
+  if (equipmentResult.error) throw new ValidationError(equipmentResult.error.message);
+  if (repairHistoryResult.error) throw new ValidationError(repairHistoryResult.error.message);
 
-  const workOrders = workOrdersResult.data ?? [];
-  const inspections = inspectionsResult.data ?? [];
-  const alerts = alertsResult.data ?? [];
-  const transcripts = transcriptsResult.data ?? [];
-  const activityLogs = logsResult.data ?? [];
+  const workOrders: WorkOrder[] = (workOrdersResult.data as WorkOrder[]) ?? [];
+  const inspections: InspectionReport[] = (inspectionsResult.data as InspectionReport[]) ?? [];
+  const alerts: Alert[] = (alertsResult.data as Alert[]) ?? [];
+  const transcripts: Transcript[] = (transcriptsResult.data as Transcript[]) ?? [];
+  const activityLogs: ActivityLog[] = (logsResult.data as ActivityLog[]) ?? [];
+  const technicians: User[] = (usersResult.data as User[]) ?? [];
+  const equipment: Equipment[] = (equipmentResult.data as Equipment[]) ?? [];
+  const repairHistory: RepairHistory[] = (repairHistoryResult.data as RepairHistory[]) ?? [];
 
   const workOrderCounts = summarizeWorkOrders(workOrders);
   const inspectionCounts = summarizeInspections(inspections);
   const alertCounts = summarizeAlerts(alerts);
+
+  // A technician is active if they have activity logs or transcripts in the last 7 days.
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const activeTechIds = new Set<string>();
+  activityLogs.forEach((log) => {
+    if (new Date(log.created_at) >= sevenDaysAgo) {
+      activeTechIds.add(log.user_id);
+    }
+  });
+  transcripts.forEach((t) => {
+    if (new Date(t.created_at) >= sevenDaysAgo) {
+      activeTechIds.add(t.user_id);
+    }
+  });
+
+  const activeTechs = technicians.filter((tech) => activeTechIds.has(tech.id));
+  // Fallback to total technicians with ANY activity if 7-day count is 0, to avoid showing 0 on older databases.
+  let activeTechniciansCount = activeTechs.length;
+  if (activeTechniciansCount === 0 && technicians.length > 0) {
+    const allActivityUserIds = new Set([
+      ...activityLogs.map((l) => l.user_id),
+      ...transcripts.map((t) => t.user_id),
+    ]);
+    const techniciansWithActivity = technicians.filter((tech) => allActivityUserIds.has(tech.id));
+    activeTechniciansCount =
+      techniciansWithActivity.length > 0 ? techniciansWithActivity.length : technicians.length;
+  }
 
   return {
     user: currentUser,
@@ -717,11 +781,15 @@ export async function getSupervisorDashboard(
       ...alertCounts,
       transcripts: transcripts.length,
       activityLogs: activityLogs.length,
+      activeTechnicians: activeTechniciansCount,
     },
     workOrders,
     inspections,
     alerts,
     transcripts,
     activityLogs,
+    technicians,
+    equipment,
+    repairHistory,
   };
 }
