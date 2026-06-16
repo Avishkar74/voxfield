@@ -86,6 +86,10 @@ export interface Transcript {
   tools_used: string[] | null;
   created_at: string;
   updated_at: string;
+  is_offline?: boolean;
+  captured_at?: string | null;
+  synced_at?: string | null;
+  queue_duration?: number | null;
 }
 
 export interface ActivityLog {

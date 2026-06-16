@@ -13,7 +13,13 @@ export async function processVoiceQuery(
   adminClient: SupabaseClient<Database>,
   user: AuthenticatedRequestUser,
   userPrompt: string,
-  sessionId?: string
+  sessionId?: string,
+  offlineMetadata?: {
+    isOffline?: boolean;
+    capturedAt?: string | null;
+    syncedAt?: string | null;
+    queueDuration?: number | null;
+  }
 ): Promise<{ agentResponse: string; transcriptId: string; sessionId: string; toolsUsed: string[] }> {
   const tools = getAgentTools(adminClient, user);
   const systemPrompt = getSystemPrompt(user);
@@ -104,6 +110,10 @@ export async function processVoiceQuery(
     sessionId,
     toolsUsed,
     agentResponse: rawResponse,
+    isOffline: offlineMetadata?.isOffline,
+    capturedAt: offlineMetadata?.capturedAt || undefined,
+    syncedAt: offlineMetadata?.syncedAt || undefined,
+    queueDuration: offlineMetadata?.queueDuration || undefined,
   });
 
   return {

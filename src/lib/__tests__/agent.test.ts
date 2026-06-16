@@ -307,6 +307,10 @@ describe("processVoiceQuery integration", () => {
       p_user_prompt: "hello there",
       p_session_id: expect.any(String),
       p_tools_used: [],
+      p_is_offline: false,
+      p_captured_at: null,
+      p_synced_at: null,
+      p_queue_duration: null,
     });
   });
 

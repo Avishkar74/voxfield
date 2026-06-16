@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Mic,
   LayoutDashboard,
@@ -41,6 +41,7 @@ interface NavLink {
 
 export function AppLayout({ children, user }: AppLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useAuth();
 
   // Sidebar collapsed/expanded (desktop)
@@ -52,6 +53,19 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
+
+  // Automatically refresh dashboard data when background offline sync completes
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    import("@/lib/sync").then(({ subscribeToSyncCompletion }) => {
+      unsubscribe = subscribeToSyncCompletion(() => {
+        router.refresh();
+      });
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [router]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {

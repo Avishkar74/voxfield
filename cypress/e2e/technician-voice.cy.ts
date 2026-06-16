@@ -39,10 +39,12 @@ describe("Technician Voice Flow", () => {
       },
     }).as("queryCall");
 
-    // Trigger recording start/stop
-    cy.get("main button").click(); // Start recording
-    cy.wait(1000);
-    cy.get("main button").click(); // Stop recording
+    cy.contains("Voice Assistant Ready").should("be.visible");
+    cy.wait(500);
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Start recording
+    cy.contains("Tap to stop recording").should("be.visible");
+    cy.wait(500);
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Stop recording
 
     cy.wait("@sttCall");
     cy.wait("@queryCall");

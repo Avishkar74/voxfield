@@ -16,7 +16,15 @@ describe("Offline Mode & Synchronization", () => {
 
     // 2. Simulate offline network state via Cypress goOffline
     cy.log("Simulating system going offline");
+    cy.intercept("GET", "/api/health", {
+      forceNetworkError: true,
+    }).as("healthCheckOffline");
+
     cy.window().then((win) => {
+      Object.defineProperty(win.navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       // Trigger browser offline event
       win.dispatchEvent(new win.Event("offline"));
     });
@@ -31,17 +39,18 @@ describe("Offline Mode & Synchronization", () => {
       body: { text: "what is generator 1 status" },
     }).as("sttCall");
 
-    cy.get("main button").click(); // Start
+    cy.contains("Voice Assistant Ready").should("be.visible");
     cy.wait(500);
-    cy.get("main button").click(); // Stop
-
-    cy.wait("@sttCall");
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Start
+    cy.contains("Tap to stop recording").should("be.visible");
+    cy.wait(500);
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Stop
 
     // 5. Verify local queue updates with pending indicator
     cy.contains("1 pending synchronization").should("be.visible");
 
     // 6. Go back online and verify sync endpoint is called
-    cy.intercept("POST", "/api/health", {
+    cy.intercept("GET", "/api/health", {
       statusCode: 200,
       body: { status: "ok" },
     }).as("healthCheck");
@@ -55,11 +64,16 @@ describe("Offline Mode & Synchronization", () => {
 
     cy.log("Simulating system going online");
     cy.window().then((win) => {
+      Object.defineProperty(win.navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       win.dispatchEvent(new win.Event("online"));
     });
 
     // Health checks and sync trigger
     cy.wait("@healthCheck");
+    cy.wait("@sttCall"); // STT is executed upon reconnect to transcribe the raw recording
     cy.wait("@syncQueue");
 
     // Verify indicator goes back to System Online and pending count is cleared

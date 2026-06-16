@@ -1,4 +1,11 @@
 describe("Work Order E2E Flow", () => {
+  beforeEach(() => {
+    // Clear IndexedDB local state before each test
+    cy.window().then((win) => {
+      win.indexedDB.deleteDatabase("voiceassistant_offline");
+    });
+  });
+
   it("should display technician work orders and update status", () => {
     // 1. Sign in as Technician
     cy.visit("/login");
@@ -24,7 +31,7 @@ describe("Work Order E2E Flow", () => {
     }).as("updateWorkOrder");
 
     // 3. Verify work order list is present
-    cy.contains("Active Work Orders").should("be.visible");
+    cy.contains("My Work Orders").should("be.visible");
     cy.contains("WO-2023-001").should("be.visible");
 
     // 4. Simulate status transitions using voice command
@@ -44,9 +51,11 @@ describe("Work Order E2E Flow", () => {
       },
     }).as("queryCall");
 
-    cy.get("main button").click(); // Start
+    cy.contains("Voice Assistant Ready").should("be.visible");
     cy.wait(500);
-    cy.get("main button").click(); // Stop
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Start
+    cy.contains("Tap to stop recording").should("be.visible");
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Stop
 
     cy.wait("@sttCall");
     cy.wait("@queryCall");

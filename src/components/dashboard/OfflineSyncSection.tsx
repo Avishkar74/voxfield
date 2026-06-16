@@ -27,8 +27,8 @@ export function OfflineSyncSection() {
   const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
-    subscribeToNetworkStatus((status) => setOnline(status));
-    subscribeToSyncStatus((status) => {
+    const unsubNetwork = subscribeToNetworkStatus((status) => setOnline(status));
+    const unsubSync = subscribeToSyncStatus((status) => {
       setQueueStatus(status);
       setIsLoading(false);
     });
@@ -37,6 +37,11 @@ export function OfflineSyncSection() {
     // Read last sync time from localStorage (persisted by sync engine)
     const storedSync = localStorage.getItem("voxfield_last_sync");
     if (storedSync) setLastSyncTime(storedSync);
+
+    return () => {
+      unsubNetwork();
+      unsubSync();
+    };
   }, []);
 
   // Update last sync time when syncing completes
@@ -121,51 +126,25 @@ export function OfflineSyncSection() {
           </div>
         </div>
 
-        {/* Pending queue row */}
-        <div className="flex items-center justify-between py-2 border-b border-gray-50">
-          <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-            Pending queue
+        {/* Detailed Status Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2 border-b border-gray-50 text-center">
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-3.5 flex flex-col items-center justify-center">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Pending</span>
+            <span className="text-xl font-extrabold text-amber-500 mt-1">{queueStatus.pending}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            {isSyncing ? (
-              <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" />
-            ) : totalPending > 0 ? (
-              <Clock className="w-3.5 h-3.5 text-amber-500" />
-            ) : (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            )}
-            <span
-              className={`text-xs font-semibold ${
-                isSyncing
-                  ? "text-blue-600"
-                  : totalPending > 0
-                  ? "text-amber-600"
-                  : "text-emerald-600"
-              }`}
-            >
-              {isSyncing
-                ? "Syncing…"
-                : totalPending > 0
-                ? `${totalPending} pending`
-                : "All synced"}
-            </span>
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-3.5 flex flex-col items-center justify-center">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Processing</span>
+            <span className="text-xl font-extrabold text-blue-500 mt-1">{queueStatus.syncing}</span>
+          </div>
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-3.5 flex flex-col items-center justify-center">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Completed</span>
+            <span className="text-xl font-extrabold text-emerald-500 mt-1">{queueStatus.synced}</span>
+          </div>
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-3.5 flex flex-col items-center justify-center">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Failed</span>
+            <span className="text-xl font-extrabold text-red-500 mt-1">{queueStatus.failed}</span>
           </div>
         </div>
-
-        {/* Failed items row — only show if relevant */}
-        {hasFailed && (
-          <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
-              Failed items
-            </div>
-            <div className="flex items-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-              <span className="text-xs font-semibold text-red-600">
-                {queueStatus.failed} failed
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Last sync time */}
         <div className="flex items-center justify-between py-2">

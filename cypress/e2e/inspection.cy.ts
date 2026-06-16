@@ -1,4 +1,11 @@
 describe("Inspection and Alert E2E Flow", () => {
+  beforeEach(() => {
+    // Clear IndexedDB local state before each test
+    cy.window().then((win) => {
+      win.indexedDB.deleteDatabase("voiceassistant_offline");
+    });
+  });
+
   it("should create an inspection report and verify alert propagation", () => {
     // 1. Log in as technician
     cy.visit("/login");
@@ -40,9 +47,12 @@ describe("Inspection and Alert E2E Flow", () => {
       body: { text: "record critical inspection pump is leaking" },
     }).as("sttCall");
 
-    cy.get("main button").click(); // Start
+    cy.contains("Voice Assistant Ready").should("be.visible");
     cy.wait(500);
-    cy.get("main button").click(); // Stop
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Start
+    cy.contains("Tap to stop recording").should("be.visible");
+    cy.wait(500);
+    cy.get('button[aria-label="Toggle Voice Assistant"]').click(); // Stop
 
     cy.wait("@sttCall");
     cy.wait("@queryCall");
@@ -51,7 +61,7 @@ describe("Inspection and Alert E2E Flow", () => {
     cy.contains("recorded a critical inspection").should("be.visible");
 
     // 5. Log out and log in as supervisor to verify alerts list
-    cy.get("nav").contains("Sign out").click({ force: true });
+    cy.get('button[aria-label="Sign out"]').click({ force: true });
     cy.visit("/login");
     cy.get('input[name="email"]').type("supervisor@voxfield.com");
     cy.get('input[name="password"]').type("password123");
@@ -60,6 +70,6 @@ describe("Inspection and Alert E2E Flow", () => {
 
     // Verify supervisor dashboard components
     cy.contains("Critical Alerts").should("be.visible");
-    cy.contains("Active Orders").should("be.visible");
+    cy.contains("Active Work Orders").should("be.visible");
   });
 });

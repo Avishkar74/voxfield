@@ -38,6 +38,10 @@ export const voiceQuerySchema = z.object({
     .string()
     .max(8000, "Agent response must be at most 8000 characters")
     .optional(),
+  isOffline: z.boolean().optional(),
+  capturedAt: z.string().datetime().optional().nullable(),
+  syncedAt: z.string().datetime().optional().nullable(),
+  queueDuration: z.number().int().optional().nullable(),
 });
 
 export const createInspectionSchema = z.object({

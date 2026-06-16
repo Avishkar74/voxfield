@@ -431,6 +431,10 @@ export async function createVoiceTranscript(
     p_user_prompt: normalized.data.userPrompt,
     p_session_id: sessionId,
     p_tools_used: normalized.data.toolsUsed ?? null,
+    p_is_offline: normalized.data.isOffline ?? false,
+    p_captured_at: normalized.data.capturedAt ?? null,
+    p_synced_at: normalized.data.syncedAt ?? null,
+    p_queue_duration: normalized.data.queueDuration ?? null,
   });
 
   if (error || !data) {
@@ -447,6 +451,10 @@ export async function createVoiceTranscript(
         .update({
           agent_response: agentResponse,
           tools_used: normalized.data.toolsUsed ?? null,
+          is_offline: normalized.data.isOffline ?? false,
+          captured_at: normalized.data.capturedAt ?? null,
+          synced_at: normalized.data.syncedAt ?? null,
+          queue_duration: normalized.data.queueDuration ?? null,
         })
         .eq("id", transcriptId);
 
@@ -513,7 +521,18 @@ export async function processOfflineQueue(
           if (!payload.userPrompt) {
             throw new ValidationError("Missing userPrompt in voice-query payload");
           }
-          await processVoiceQuery(supabase, currentUser, payload.userPrompt as string, payload.sessionId as string);
+          await processVoiceQuery(
+            supabase,
+            currentUser,
+            payload.userPrompt as string,
+            payload.sessionId as string,
+            {
+              isOffline: payload.isOffline as boolean | undefined,
+              capturedAt: payload.capturedAt as string | undefined,
+              syncedAt: payload.syncedAt as string | undefined,
+              queueDuration: payload.queueDuration as number | undefined,
+            }
+          );
           processed++;
           break;
         }

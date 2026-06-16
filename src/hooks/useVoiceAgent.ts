@@ -107,16 +107,83 @@ export function useVoiceAgent() {
     }
   }, [agentState]);
 
+  const queueOfflineVoice = useCallback(async (audioBlob: Blob) => {
+    try {
+      const { enqueueVoiceInteraction } = await import("@/lib/indexeddb");
+      const { triggerSyncStatusUpdate } = await import("@/lib/sync");
+      const id = typeof window.crypto.randomUUID === "function" ? window.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      await enqueueVoiceInteraction({
+        id,
+        operation: "voice-query",
+        payload: {},
+        queuedAt: new Date().toISOString(),
+        status: "PENDING_SYNC",
+        attempt_count: 0,
+        session_id: sessionId || id,
+      }, audioBlob);
+
+      await triggerSyncStatusUpdate();
+
+      setAgentResponse("You are offline. Your voice recording has been saved to the queue and will sync automatically when online.");
+      setAgentState("IDLE");
+      router.refresh();
+    } catch (dbErr: any) {
+      console.error("Failed to save voice recording offline:", dbErr);
+      setError("Failed to save voice recording offline");
+      setAgentState("ERROR");
+    }
+  }, [sessionId, router]);
+
+  const queueOfflineText = useCallback(async (text: string) => {
+    try {
+      const { enqueueVoiceInteraction } = await import("@/lib/indexeddb");
+      const { triggerSyncStatusUpdate } = await import("@/lib/sync");
+      const id = typeof window.crypto.randomUUID === "function" ? window.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      await enqueueVoiceInteraction({
+        id,
+        operation: "voice-query",
+        payload: { userPrompt: text },
+        queuedAt: new Date().toISOString(),
+        status: "PENDING_SYNC",
+        attempt_count: 0,
+        session_id: sessionId || id,
+      });
+
+      await triggerSyncStatusUpdate();
+
+      setAgentResponse("You are offline. Your query has been saved to the queue and will sync automatically when online.");
+      setAgentState("IDLE");
+      router.refresh();
+    } catch (dbErr: any) {
+      console.error("Failed to save text query offline:", dbErr);
+      setError("Failed to save text query offline");
+      setAgentState("ERROR");
+    }
+  }, [sessionId, router]);
+
   const processAudioBlob = async (audioBlob: Blob) => {
     try {
+      // If we know we are offline, don't even try to fetch
+      if (typeof window !== "undefined" && !navigator.onLine) {
+        await queueOfflineVoice(audioBlob);
+        return;
+      }
+
       // 1. STT — transcribe audio
       const formData = new FormData();
       formData.append("audio", audioBlob, "recording.webm");
 
-      const sttRes = await fetch("/api/stt", {
-        method: "POST",
-        body: formData,
-      });
+      let sttRes;
+      try {
+        sttRes = await fetch("/api/stt", {
+          method: "POST",
+          body: formData,
+        });
+      } catch (err) {
+        // Fetch failed due to network error
+        await queueOfflineVoice(audioBlob);
+        return;
+      }
 
       if (!sttRes.ok) throw new Error("Transcription failed");
       const sttData = await sttRes.json();
@@ -135,12 +202,25 @@ export function useVoiceAgent() {
         return;
       }
 
+      // If network dropped after STT succeeded
+      if (typeof window !== "undefined" && !navigator.onLine) {
+        await queueOfflineText(text);
+        return;
+      }
+
       // 2. Query Agent
-      const queryRes = await fetch("/api/voice-query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPrompt: text, sessionId }),
-      });
+      let queryRes;
+      try {
+        queryRes = await fetch("/api/voice-query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userPrompt: text, sessionId }),
+        });
+      } catch (err) {
+        // Fetch failed due to network error (STT worked but query failed)
+        await queueOfflineText(text);
+        return;
+      }
 
       if (!queryRes.ok) throw new Error("Agent processing failed");
       const queryData = await queryRes.json();
@@ -181,12 +261,24 @@ export function useVoiceAgent() {
       // Ensure AudioContext is running — we ARE in a user gesture here
       await ensureAudioContext();
 
+      if (typeof window !== "undefined" && !navigator.onLine) {
+        await queueOfflineText(text);
+        return;
+      }
+
       // 1. Query Agent
-      const queryRes = await fetch("/api/voice-query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPrompt: text, sessionId }),
-      });
+      let queryRes;
+      try {
+        queryRes = await fetch("/api/voice-query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userPrompt: text, sessionId }),
+        });
+      } catch (err) {
+        // Fetch failed due to network error
+        await queueOfflineText(text);
+        return;
+      }
 
       if (!queryRes.ok) throw new Error("Agent processing failed");
       const queryData = await queryRes.json();
@@ -216,7 +308,7 @@ export function useVoiceAgent() {
       setAgentState("ERROR");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, sessionId]);
+  }, [router, sessionId, queueOfflineText]);
 
   const getAnalyser = useCallback(() => {
     return analyserRef.current;

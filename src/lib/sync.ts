@@ -9,30 +9,46 @@ import {
 } from "./indexeddb";
 
 let isSyncing = false;
-let syncStatusListener: ((status: { pending: number; syncing: number; synced: number; failed: number }) => void) | null = null;
-let networkStatusListener: ((online: boolean) => void) | null = null;
+let syncStatusListeners: Array<(status: { pending: number; syncing: number; synced: number; failed: number }) => void> = [];
+let networkStatusListeners: Array<(online: boolean) => void> = [];
+let syncCompletionListeners: Array<() => void> = [];
 let onlineState = true;
 
 if (typeof window !== "undefined") {
   onlineState = navigator.onLine;
 }
 
-export function subscribeToSyncStatus(listener: typeof syncStatusListener) {
-  syncStatusListener = listener;
+export function subscribeToSyncStatus(listener: (status: { pending: number; syncing: number; synced: number; failed: number }) => void) {
+  syncStatusListeners.push(listener);
   // Trigger immediate update
-  triggerStatusUpdate();
+  getQueueStatus().then((status) => listener(status));
+  return () => {
+    syncStatusListeners = syncStatusListeners.filter((l) => l !== listener);
+  };
 }
 
-export function subscribeToNetworkStatus(listener: typeof networkStatusListener) {
-  networkStatusListener = listener;
-  listener?.(onlineState);
+export function subscribeToNetworkStatus(listener: (online: boolean) => void) {
+  networkStatusListeners.push(listener);
+  listener(onlineState);
+  return () => {
+    networkStatusListeners = networkStatusListeners.filter((l) => l !== listener);
+  };
 }
 
-async function triggerStatusUpdate() {
-  if (syncStatusListener) {
-    const status = await getQueueStatus();
-    syncStatusListener(status);
-  }
+export function subscribeToSyncCompletion(listener: () => void) {
+  syncCompletionListeners.push(listener);
+  return () => {
+    syncCompletionListeners = syncCompletionListeners.filter((l) => l !== listener);
+  };
+}
+
+export async function triggerSyncStatusUpdate() {
+  const status = await getQueueStatus();
+  syncStatusListeners.forEach((l) => l(status));
+}
+
+export function triggerSyncCompletion() {
+  syncCompletionListeners.forEach((l) => l());
 }
 
 export async function checkConnectivity(): Promise<boolean> {
@@ -50,7 +66,7 @@ export async function checkConnectivity(): Promise<boolean> {
 function setOnlineState(online: boolean) {
   if (onlineState !== online) {
     onlineState = online;
-    networkStatusListener?.(onlineState);
+    networkStatusListeners.forEach((l) => l(onlineState));
     if (online) {
       // Trigger sync automatically when reconnected
       syncOfflineQueue();
@@ -68,13 +84,13 @@ export async function syncOfflineQueue(force = false): Promise<void> {
   }
 
   isSyncing = true;
-  await triggerStatusUpdate();
+  await triggerSyncStatusUpdate();
 
   try {
     const pendingItems = await getPendingInteractions();
     if (pendingItems.length === 0) {
       isSyncing = false;
-      await triggerStatusUpdate();
+      await triggerSyncStatusUpdate();
       return;
     }
 
@@ -123,6 +139,14 @@ export async function syncOfflineQueue(force = false): Promise<void> {
               // Clear local recording after successful transcription
               await deleteRecording(item.id);
             }
+
+            // Enrich voice query with offline metadata
+            finalPayload.isOffline = true;
+            finalPayload.capturedAt = item.queuedAt;
+            finalPayload.syncedAt = new Date().toISOString();
+            finalPayload.queueDuration = Math.round(
+              (new Date(finalPayload.syncedAt).getTime() - new Date(item.queuedAt).getTime()) / 1000
+            );
           }
 
           readyBatch.push({
@@ -179,7 +203,8 @@ export async function syncOfflineQueue(force = false): Promise<void> {
     }
   } finally {
     isSyncing = false;
-    await triggerStatusUpdate();
+    await triggerSyncStatusUpdate();
+    triggerSyncCompletion();
   }
 }
 
