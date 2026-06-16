@@ -11,6 +11,7 @@ export function useVoiceAgent() {
   const [transcript, setTranscript] = useState<string>("");
   const [agentResponse, setAgentResponse] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -64,7 +65,16 @@ export function useVoiceAgent() {
       source.connect(analyser);
       analyserRef.current = analyser;
 
-      const mediaRecorder = new MediaRecorder(stream);
+      let options = {};
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          options = { mimeType: "audio/webm;codecs=opus" };
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          options = { mimeType: "audio/webm" };
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -81,7 +91,7 @@ export function useVoiceAgent() {
         await processAudioBlob(audioBlob);
       };
 
-      mediaRecorder.start(1000);
+      mediaRecorder.start();
       setAgentState("LISTENING");
     } catch (err: any) {
       setError(err.message || "Microphone access denied");
@@ -129,11 +139,16 @@ export function useVoiceAgent() {
       const queryRes = await fetch("/api/voice-query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPrompt: text }),
+        body: JSON.stringify({ userPrompt: text, sessionId }),
       });
 
       if (!queryRes.ok) throw new Error("Agent processing failed");
       const queryData = await queryRes.json();
+      
+      if (queryData?.data?.sessionId) {
+        setSessionId(queryData.data.sessionId);
+      }
+
       const reply = queryData.data.agentResponse;
       setAgentResponse(reply);
 
@@ -170,11 +185,16 @@ export function useVoiceAgent() {
       const queryRes = await fetch("/api/voice-query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPrompt: text }),
+        body: JSON.stringify({ userPrompt: text, sessionId }),
       });
 
       if (!queryRes.ok) throw new Error("Agent processing failed");
       const queryData = await queryRes.json();
+      
+      if (queryData?.data?.sessionId) {
+        setSessionId(queryData.data.sessionId);
+      }
+
       const reply = queryData.data.agentResponse;
       setAgentResponse(reply);
 
@@ -196,7 +216,7 @@ export function useVoiceAgent() {
       setAgentState("ERROR");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, [router, sessionId]);
 
   const getAnalyser = useCallback(() => {
     return analyserRef.current;

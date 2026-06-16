@@ -22,8 +22,32 @@ export async function processVoiceQuery(
     apiKey: process.env.OPENAI_API_KEY || "test-mock-key",
   });
 
+  // Load rolling conversation history for context resolution (max 20 turns)
+  let historyMessages: any[] = [];
+  if (sessionId && typeof adminClient.from === "function") {
+    try {
+      const { data: pastTranscripts } = await adminClient
+        .from("transcripts")
+        .select("user_prompt, agent_response")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (pastTranscripts && pastTranscripts.length > 0) {
+        const chronologically = [...pastTranscripts].reverse() as Array<{ user_prompt: string; agent_response: string }>;
+        for (const t of chronologically) {
+          historyMessages.push({ role: "user", content: t.user_prompt });
+          historyMessages.push({ role: "assistant", content: t.agent_response });
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load transcript history for session:", err);
+    }
+  }
+
   let messages: any[] = [
     { role: "system", content: systemPrompt },
+    ...historyMessages,
     { role: "user", content: userPrompt },
   ];
 

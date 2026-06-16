@@ -30,7 +30,9 @@ import type {
   Alert,
   Database,
   Equipment,
+  ErrorLog,
   InspectionReport,
+  QuantityLog,
   RepairHistory,
   Transcript,
   User,
@@ -791,5 +793,72 @@ export async function getSupervisorDashboard(
     technicians,
     equipment,
     repairHistory,
+  };
+}
+
+export interface SupervisorOperationsResult {
+  workOrders: WorkOrder[];
+  transcripts: Transcript[];
+  quantityLogs: QuantityLog[];
+  errorLogs: ErrorLog[];
+  activityLogs: ActivityLog[];
+  technicians: User[];
+}
+
+export async function getSupervisorOperations(
+  supabase: SupabaseClient<Database>,
+  currentUser: AuthenticatedRequestUser,
+): Promise<SupervisorOperationsResult> {
+  if (currentUser.role !== "SUPERVISOR") {
+    throw new ForbiddenError("Only supervisors can access operations data");
+  }
+
+  const [
+    woRes,
+    transcriptRes,
+    quantityRes,
+    errorRes,
+    activityRes,
+    techsRes
+  ] = await Promise.all([
+    supabase
+      .from("work_orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("transcripts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("quantity_logs")
+      .select("*")
+      .order("timestamp", { ascending: false })
+      .limit(50),
+    supabase
+      .from("error_logs")
+      .select("*")
+      .order("timestamp", { ascending: false })
+      .limit(50),
+    supabase
+      .from("activity_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("users")
+      .select("*")
+      .eq("role", "TECHNICIAN")
+      .order("created_at", { ascending: false })
+  ]);
+
+  return {
+    workOrders: (woRes.data as WorkOrder[]) || [],
+    transcripts: (transcriptRes.data as Transcript[]) || [],
+    quantityLogs: (quantityRes.data as QuantityLog[]) || [],
+    errorLogs: (errorRes.data as ErrorLog[]) || [],
+    activityLogs: (activityRes.data as ActivityLog[]) || [],
+    technicians: (techsRes.data as User[]) || [],
   };
 }

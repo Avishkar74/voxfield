@@ -71,18 +71,18 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const navLinks: NavLink[] = isTechnician
     ? [
         { name: "Dashboard", href: "/technician", icon: LayoutDashboard },
-        { name: "Work Orders", href: "#work-orders", icon: Wrench },
-        { name: "Inspections", href: "#inspections", icon: ClipboardCheck },
-        { name: "Activity", href: "#activity", icon: History },
-        { name: "Voice History", href: "#voice-history", icon: MessageSquare },
+        { name: "Work Orders", href: "/technician#work-orders", icon: Wrench },
+        { name: "Inspections", href: "/technician#inspections", icon: ClipboardCheck },
+        { name: "Activity", href: "/technician#activity", icon: History },
+        { name: "Voice History", href: "/technician#voice-history", icon: MessageSquare },
       ]
     : [
         { name: "Dashboard", href: "/supervisor", icon: LayoutDashboard },
-        { name: "Work Orders", href: "#work-orders", icon: Wrench },
-        { name: "Inspections", href: "#inspections", icon: ClipboardCheck },
-        { name: "Alerts", href: "#alerts", icon: ShieldAlert },
-        { name: "Activity", href: "#activity", icon: History },
-        { name: "Reports", href: "#reports", icon: FileBarChart2 },
+        { name: "Work Orders", href: "/supervisor#work-orders", icon: Wrench },
+        { name: "Inspections", href: "/supervisor#inspections", icon: ClipboardCheck },
+        { name: "Alerts", href: "/supervisor#alerts", icon: ShieldAlert },
+        { name: "Activity", href: "/supervisor#activity", icon: History },
+        { name: "Operations Log", href: "/supervisor/operations", icon: FileBarChart2 },
       ];
 
   const handleSignOut = async () => {
@@ -94,9 +94,13 @@ export function AppLayout({ children, user }: AppLayoutProps) {
     }
   };
 
-  const isLinkActive = (link: NavLink) =>
-    link.href === (isTechnician ? "/technician" : "/supervisor") &&
-    (pathname === "/technician" || pathname === "/supervisor");
+  const isLinkActive = (link: NavLink) => {
+    if (link.href.includes("#")) {
+      const parts = link.href.split("#");
+      return pathname === parts[0];
+    }
+    return pathname === link.href;
+  };
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex flex-col h-full">

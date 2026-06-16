@@ -38,7 +38,7 @@ BEGIN
     RAISE EXCEPTION E'Developer accounts not found in public.users.\n\nTo seed development data:\n1. Open http://localhost:3000/login\n2. Click "Sign up" and create a Technician account with email: technician@gmail.com\n3. Click "Sign up" and create a Supervisor account with email: supervisor@gmail.com\n4. Re-run this SQL script in the SQL Editor.';
   END IF;
 
-  -- Step 1: Realistic Industrial Equipment (6 units)
+  -- Step 1: Realistic Industrial Equipment (7 units)
   INSERT INTO public.equipment (id, equipment_code, name, location, manufacturer, installation_date, status)
   VALUES
     ('e1000001-0000-0000-0000-000000000001', 'MTR-102',  'Conveyor Belt Motor 102',      'Factory Floor A - Line 2',   'Siemens',    '2019-03-15', 'ACTIVE'),
@@ -46,7 +46,8 @@ BEGIN
     ('e1000001-0000-0000-0000-000000000003', 'COMP-001', 'Air Compressor Unit 001',       'Compressor Bay',             'Atlas Copco','2018-11-10', 'ACTIVE'),
     ('e1000001-0000-0000-0000-000000000004', 'GEN-B2',   'Backup Generator 250kW',        'Building B - Basement',      'Caterpillar','2016-05-30', 'ACTIVE'),
     ('e1000001-0000-0000-0000-000000000005', 'HVAC-F3',  'HVAC Floor 3 Central Unit',     'Building A - Floor 3 Plant', 'Carrier',    '2021-01-18', 'ACTIVE'),
-    ('e1000001-0000-0000-0000-000000000006', 'CHI-001',  'Industrial Chiller Unit 001',   'Chiller Room 1',             'York',       '2017-09-05', 'UNDER_MAINTENANCE')
+    ('e1000001-0000-0000-0000-000000000006', 'CHI-001',  'Industrial Chiller Unit 001',   'Chiller Room 1',             'York',       '2017-09-05', 'UNDER_MAINTENANCE'),
+    ('e1000001-0000-0000-0000-000000000007', 'HVAC-R1-01', 'Rooftop HVAC Unit 01',        'Building A - Roof',          'Carrier',    '2018-05-12', 'ACTIVE')
   ON CONFLICT (id) DO NOTHING;
 
   -- Step 2: Repair History (11 entries, linked to equipment)
@@ -62,7 +63,8 @@ BEGIN
     ('e1000001-0000-0000-0000-000000000004', '2025-03-01', 'Battery Replacement',   'Replaced starting batteries (24V system). Load test passed at 100% rated output.', tech_id, 2.0, 680.00),
     ('e1000001-0000-0000-0000-000000000005', '2025-07-20', 'Refrigerant Leak',      'Located and sealed refrigerant leak in evaporator coil. Recharged with R410A.', tech_id, 5.0, 1750.00),
     ('e1000001-0000-0000-0000-000000000006', '2025-08-11', 'Cooling Tower Fault',   'Replaced cooling tower fan motor. COP improved from 2.1 to 3.4.', tech_id, 7.0, 3200.00),
-    ('e1000001-0000-0000-0000-000000000006', '2025-10-02', 'Compressor Failure',    'Replaced scroll compressor. Chiller output restored to 500 kW.', tech_id, 12.0, 8500.00)
+    ('e1000001-0000-0000-0000-000000000006', '2025-10-02', 'Compressor Failure',    'Replaced scroll compressor. Chiller output restored to 500 kW.', tech_id, 12.0, 8500.00),
+    ('e1000001-0000-0000-0000-000000000007', '2022-06-15', 'Compressor Failure',    'Replaced faulty compressor and recharged refrigerant.', tech_id, 4.5, 1250.00)
   ON CONFLICT DO NOTHING;
 
   -- Step 3: Inspection Reports (5+ entries)
@@ -92,7 +94,12 @@ BEGIN
       'CHI-001 Post-Repair Verification',
       'New scroll compressor installed and tested. Chiller output verified at 480 kW. COP = 3.2.',
       'Monitor chiller performance for 72 hours post-repair. Log data every 4 hours.',
-      'LOW', 'REVIEWED')
+      'LOW', 'REVIEWED'),
+    ('a1000001-0000-0000-0000-000000000006', 'e1000001-0000-0000-0000-000000000007', tech_id,
+      'Quarterly HVAC PM',
+      'Filters replaced, belts inspected. Found slight vibration in fan motor.',
+      'Monitor fan motor vibration; consider bearing replacement next quarter.',
+      'LOW', 'CLOSED')
   ON CONFLICT (id) DO NOTHING;
 
   -- Step 4: Work Orders (5+ entries, linked to equipment + users)
@@ -133,7 +140,9 @@ BEGIN
     ('e1000001-0000-0000-0000-000000000005', 'a1000001-0000-0000-0000-000000000004',
       'HIGH', 'HVAC-F3: Supply air temperature exceeding setpoint by 4°C. Evaporator icing detected.', 'ACKNOWLEDGED'),
     ('e1000001-0000-0000-0000-000000000001', NULL,
-      'HIGH', 'MTR-102: Drive belt elongation detected. Replacement required within 30 days.', 'OPEN')
+      'HIGH', 'MTR-102: Drive belt elongation detected. Replacement required within 30 days.', 'OPEN'),
+    ('e1000001-0000-0000-0000-000000000007', NULL,
+      'HIGH', 'HVAC-R1-01 return air temperature exceeding threshold.', 'ACKNOWLEDGED')
   ON CONFLICT DO NOTHING;
 
   -- Step 6: Activity Logs (12 entries)
@@ -150,7 +159,8 @@ BEGIN
     (tech_id, 'UPDATE_WORK_ORDER', 'work_order', 'd1000001-0000-0000-0000-000000000005', 'Closed work order WO-2025-005 for CHI-001 monitoring'),
     (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000005', 'Queried HVAC-F3 maintenance history'),
     (tech_id, 'CREATE_INSPECTION', 'inspection_report', 'a1000001-0000-0000-0000-000000000004', 'Created HIGH severity inspection for HVAC-F3 cooling drop'),
-    (sup_id, 'CREATE_WORK_ORDER', 'work_order', 'd1000001-0000-0000-0000-000000000001', 'Supervisor created CRITICAL work order WO-2025-001 for PUMP-201')
+    (sup_id, 'CREATE_WORK_ORDER', 'work_order', 'd1000001-0000-0000-0000-000000000001', 'Supervisor created CRITICAL work order WO-2025-001 for PUMP-201'),
+    (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000007', 'Queried repair history for HVAC-R1-01')
   ON CONFLICT DO NOTHING;
 
   -- Step 7: Transcripts (11 voice interactions)
@@ -211,6 +221,27 @@ BEGIN
       'Grundfos Hydraulic Pump PUMP-201 Maintenance Schedule. Seal replacement interval: 2 years or 6000 hours. Oil change: every 2000 hours. Alignment check: every 6 months. Recommended seal type: Type-B mechanical seal. System operating pressure: 200 bar.'),
     ('e1000001-0000-0000-0000-000000000003', 'COMP-001 Service Guide', 'MAINTENANCE_GUIDE',
       'Atlas Copco Air Compressor COMP-001 Service Guide. Operating pressure: 8.5 bar. Air filter replacement: every 2000 hours or 6 months. Oil change: every 4000 hours. Belt inspection: every 1000 hours. To reset alarm: hold ALT button for 5 seconds.')
+  ON CONFLICT DO NOTHING;
+
+  -- Step 9: Quantity Logs (mock inventory logs)
+  INSERT INTO public.quantity_logs (asset_item, previous_quantity, updated_quantity, user_id, source_action)
+  VALUES
+    ('SIE-B-22X Drive Belt', 15, 14, tech_id, 'WO-2025-002: Belt Replacement on MTR-102'),
+    ('Type-B Mechanical Seal', 4, 3, tech_id, 'WO-2025-001: Replace Mechanical Seal on PUMP-201'),
+    ('R410A Refrigerant Cylinders', 8, 6, tech_id, 'WO-2025-003: HVAC-F3 Refrigerant Charge'),
+    ('24V Starting Battery', 3, 2, tech_id, 'WO-2025-004: GEN-B2 battery replacement'),
+    ('15W-40 Engine Oil (L)', 200, 180, tech_id, 'WO-2025-004: GEN-B2 Annual Service'),
+    ('Scroll Compressor Unit', 2, 1, tech_id, 'CHI-001 Post-Repair Compressor swap')
+  ON CONFLICT DO NOTHING;
+
+  -- Step 10: Error Logs (mock system errors)
+  INSERT INTO public.error_logs (error_type, error_message, component_service, severity)
+  VALUES
+    ('OpenAI API Timeout', 'Request to gpt-4o timed out after 10000ms. Retrying connection.', 'agent.ts', 'MEDIUM'),
+    ('AssemblyAI Processing Error', 'Transcription job failed due to noisy input signal.', 'stt/route.ts', 'LOW'),
+    ('Database Timeout', 'RPC create_work_order_tx locked by transaction concurrency.', 'operations.service.ts', 'HIGH'),
+    ('Supabase Auth Connection Refused', 'Auth service returned 502 Bad Gateway during session verification.', 'middleware.ts', 'CRITICAL'),
+    ('OpenAI Rate Limit Exceeded', 'Rate limit for gpt-4o tier reached. Falling back to exponential backoff.', 'agent.ts', 'LOW')
   ON CONFLICT DO NOTHING;
 
 END $$;

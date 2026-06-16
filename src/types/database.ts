@@ -122,6 +122,25 @@ export interface EquipmentDocument {
   updated_at: string;
 }
 
+export interface QuantityLog {
+  id: string;
+  asset_item: string;
+  previous_quantity: number;
+  updated_quantity: number;
+  user_id: string;
+  timestamp: string;
+  source_action: string;
+}
+
+export interface ErrorLog {
+  id: string;
+  error_type: string;
+  error_message: string;
+  component_service: string;
+  timestamp: string;
+  severity: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -212,6 +231,24 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Omit<EquipmentDocument, "id">>;
+        Relationships: [];
+      };
+      quantity_logs: {
+        Row: QuantityLog;
+        Insert: Omit<QuantityLog, "id" | "timestamp"> & {
+          id?: string;
+          timestamp?: string;
+        };
+        Update: Partial<Omit<QuantityLog, "id">>;
+        Relationships: [];
+      };
+      error_logs: {
+        Row: ErrorLog;
+        Insert: Omit<ErrorLog, "id" | "timestamp"> & {
+          id?: string;
+          timestamp?: string;
+        };
+        Update: Partial<Omit<ErrorLog, "id">>;
         Relationships: [];
       };
     };

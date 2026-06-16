@@ -416,4 +416,55 @@ describe("processVoiceQuery integration", () => {
     expect(result.agentResponse).toBe("Sorry, I encountered an error checking the history.");
     expect(result.toolsUsed).toContain("getEquipmentHistory");
   });
+
+  it("should retrieve rolling session memory history and append it to openai chat messages context", async () => {
+    const pastTranscripts = [
+      { user_prompt: "First user message", agent_response: "First agent response" },
+      { user_prompt: "Second user message", agent_response: "Second agent response" }
+    ];
+
+    const mockSelect = vi.fn().mockReturnThis();
+    const mockEq = vi.fn().mockReturnThis();
+    const mockOrder = vi.fn().mockReturnThis();
+    const mockLimit = vi.fn().mockResolvedValue({ data: pastTranscripts, error: null });
+
+    mockSupabase.from.mockReturnValue({
+      select: mockSelect,
+      eq: mockEq,
+      order: mockOrder,
+      limit: mockLimit,
+    });
+
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: { transcriptId: "t-123", sessionId: "s-123" },
+      error: null,
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: "Response with memory context.",
+          },
+        },
+      ],
+    });
+
+    const result = await processVoiceQuery(mockSupabase, techUser, "Third user message", "active-session-id");
+
+    expect(result.agentResponse).toBe("Response with memory context.");
+    expect(mockSupabase.from).toHaveBeenCalledWith("transcripts");
+    expect(mockEq).toHaveBeenCalledWith("session_id", "active-session-id");
+    
+    // Verify that the mocked OpenAI call was invoked with the prepended messages
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      messages: expect.arrayContaining([
+        expect.objectContaining({ role: "user", content: "First user message" }),
+        expect.objectContaining({ role: "assistant", content: "First agent response" }),
+        expect.objectContaining({ role: "user", content: "Second user message" }),
+        expect.objectContaining({ role: "assistant", content: "Second agent response" }),
+        expect.objectContaining({ role: "user", content: "Third user message" }),
+      ]),
+    }));
+  });
 });
