@@ -7,14 +7,18 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // requireAuth() throws UnauthorizedError if no valid session exists.
+  // We catch it and redirect to /login instead of surfacing an error page.
   let user;
   try {
     user = await requireAuth();
-  } catch (err) {
+  } catch {
     redirect("/login");
   }
 
   return (
-    <AppLayout user={user}>{children}</AppLayout>
+    // user is always defined here — redirect() above is a no-return throw.
+    // The non-null assertion is safe because redirect() exits the function.
+    <AppLayout user={user!}>{children}</AppLayout>
   );
 }

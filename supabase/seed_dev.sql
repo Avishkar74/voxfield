@@ -1,0 +1,216 @@
+-- =============================================================
+-- VoxField Development Seed Data
+-- =============================================================
+-- IMPORTANT: For development use only.
+-- Run this in Supabase Dashboard > SQL Editor
+--
+-- BEFORE running this script:
+-- 1. Run the local Next.js dev server: npm run dev
+-- 2. Open http://localhost:3000/login
+-- 3. Click "Sign up" and register a Technician account with email:
+--      technician@gmail.com
+-- 4. Click "Sign up" and register a Supervisor account with email:
+--      supervisor@gmail.com
+-- 5. Once registered, they are automatically synced to public.users profiles.
+-- 6. Execute this script in the SQL editor to link all equipment, work orders,
+--    inspections, alerts, logs, and transcripts to these accounts.
+-- =============================================================
+
+DO $$
+DECLARE
+  tech_id uuid;
+  sup_id uuid;
+BEGIN
+  -- Retrieve the user IDs from public.users
+  SELECT id INTO tech_id FROM public.users WHERE email = 'technician@gmail.com';
+  SELECT id INTO sup_id FROM public.users WHERE email = 'supervisor@gmail.com';
+
+  -- Fallbacks: if they signed up with different emails but have the matching roles, use them
+  IF tech_id IS NULL THEN
+    SELECT id INTO tech_id FROM public.users WHERE role = 'TECHNICIAN' LIMIT 1;
+  END IF;
+  IF sup_id IS NULL THEN
+    SELECT id INTO sup_id FROM public.users WHERE role = 'SUPERVISOR' LIMIT 1;
+  END IF;
+
+  -- Raise exception if no accounts are found
+  IF tech_id IS NULL OR sup_id IS NULL THEN
+    RAISE EXCEPTION E'Developer accounts not found in public.users.\n\nTo seed development data:\n1. Open http://localhost:3000/login\n2. Click "Sign up" and create a Technician account with email: technician@gmail.com\n3. Click "Sign up" and create a Supervisor account with email: supervisor@gmail.com\n4. Re-run this SQL script in the SQL Editor.';
+  END IF;
+
+  -- Step 1: Realistic Industrial Equipment (6 units)
+  INSERT INTO public.equipment (id, equipment_code, name, location, manufacturer, installation_date, status)
+  VALUES
+    ('e1000001-0000-0000-0000-000000000001', 'MTR-102',  'Conveyor Belt Motor 102',      'Factory Floor A - Line 2',   'Siemens',    '2019-03-15', 'ACTIVE'),
+    ('e1000001-0000-0000-0000-000000000002', 'PUMP-201', 'Hydraulic Pump Station 201',   'Pump Room B',                'Grundfos',   '2020-07-22', 'UNDER_MAINTENANCE'),
+    ('e1000001-0000-0000-0000-000000000003', 'COMP-001', 'Air Compressor Unit 001',       'Compressor Bay',             'Atlas Copco','2018-11-10', 'ACTIVE'),
+    ('e1000001-0000-0000-0000-000000000004', 'GEN-B2',   'Backup Generator 250kW',        'Building B - Basement',      'Caterpillar','2016-05-30', 'ACTIVE'),
+    ('e1000001-0000-0000-0000-000000000005', 'HVAC-F3',  'HVAC Floor 3 Central Unit',     'Building A - Floor 3 Plant', 'Carrier',    '2021-01-18', 'ACTIVE'),
+    ('e1000001-0000-0000-0000-000000000006', 'CHI-001',  'Industrial Chiller Unit 001',   'Chiller Room 1',             'York',       '2017-09-05', 'UNDER_MAINTENANCE')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Step 2: Repair History (11 entries, linked to equipment)
+  INSERT INTO public.repair_history (equipment_id, repair_date, failure_type, description, performed_by, repair_duration_hours, cost)
+  VALUES
+    ('e1000001-0000-0000-0000-000000000001', '2025-01-10', 'Bearing Failure',       'Replaced worn bearings on main shaft. Vibration levels returned to normal.', tech_id, 3.5, 850.00),
+    ('e1000001-0000-0000-0000-000000000001', '2025-04-22', 'Overheating',           'Cleaned cooling vents and replaced thermal paste. Motor temp reduced by 15°C.', tech_id, 2.0, 320.00),
+    ('e1000001-0000-0000-0000-000000000001', '2025-09-05', 'Electrical Fault',      'Replaced faulty capacitor bank. Power factor corrected to 0.95.', tech_id, 4.0, 1100.00),
+    ('e1000001-0000-0000-0000-000000000002', '2024-11-30', 'Hydraulic Seal Leak',   'Replaced primary shaft seal. System pressure stabilized at 200 bar.', tech_id, 6.0, 2400.00),
+    ('e1000001-0000-0000-0000-000000000002', '2025-05-14', 'Pump Cavitation',       'Cleared air pockets, adjusted inlet valve. Flow restored to 450 L/min.', tech_id, 2.5, 180.00),
+    ('e1000001-0000-0000-0000-000000000003', '2025-02-08', 'Air Filter Clogged',    'Replaced primary and secondary air filters. Compression ratio improved.', tech_id, 1.5, 95.00),
+    ('e1000001-0000-0000-0000-000000000003', '2025-06-17', 'Pressure Valve Fault',  'Replaced faulty pressure relief valve. Set pressure adjusted to 8.5 bar.', tech_id, 3.0, 560.00),
+    ('e1000001-0000-0000-0000-000000000004', '2025-03-01', 'Battery Replacement',   'Replaced starting batteries (24V system). Load test passed at 100% rated output.', tech_id, 2.0, 680.00),
+    ('e1000001-0000-0000-0000-000000000005', '2025-07-20', 'Refrigerant Leak',      'Located and sealed refrigerant leak in evaporator coil. Recharged with R410A.', tech_id, 5.0, 1750.00),
+    ('e1000001-0000-0000-0000-000000000006', '2025-08-11', 'Cooling Tower Fault',   'Replaced cooling tower fan motor. COP improved from 2.1 to 3.4.', tech_id, 7.0, 3200.00),
+    ('e1000001-0000-0000-0000-000000000006', '2025-10-02', 'Compressor Failure',    'Replaced scroll compressor. Chiller output restored to 500 kW.', tech_id, 12.0, 8500.00)
+  ON CONFLICT DO NOTHING;
+
+  -- Step 3: Inspection Reports (5+ entries)
+  INSERT INTO public.inspection_reports (id, equipment_id, technician_id, title, description, recommendation, severity, status)
+  VALUES
+    ('a1000001-0000-0000-0000-000000000001', 'e1000001-0000-0000-0000-000000000001', tech_id,
+      'Monthly PM - MTR-102',
+      'Lubricated all bearings. Belt tension checked and adjusted. Motor draws 18A under full load (rated 20A).',
+      'Schedule belt replacement within 30 days. Current elongation is 3mm beyond tolerance.',
+      'MEDIUM', 'REVIEWED'),
+    ('a1000001-0000-0000-0000-000000000002', 'e1000001-0000-0000-0000-000000000002', tech_id,
+      'PUMP-201 Critical Seal Inspection',
+      'Discovered active mechanical seal leak. Oil visible on pump housing. Estimated loss 0.5L/hr.',
+      'Immediate shutdown and seal replacement required. Continued operation risks catastrophic pump failure.',
+      'CRITICAL', 'OPEN'),
+    ('a1000001-0000-0000-0000-000000000003', 'e1000001-0000-0000-0000-000000000003', tech_id,
+      'COMP-001 Quarterly Inspection',
+      'Air delivery pressure stable at 8.5 bar. Vibration within limits. Oil level topped up.',
+      'No immediate action required. Next full service due in 500 operating hours.',
+      'LOW', 'CLOSED'),
+    ('a1000001-0000-0000-0000-000000000004', 'e1000001-0000-0000-0000-000000000005', tech_id,
+      'HVAC-F3 Cooling Performance Drop',
+      'Supply air temperature 4°C above setpoint. Evaporator coils showing ice formation on lower fins.',
+      'Inspect refrigerant charge level. Possible low charge condition or blocked expansion valve.',
+      'HIGH', 'OPEN'),
+    ('a1000001-0000-0000-0000-000000000005', 'e1000001-0000-0000-0000-000000000006', tech_id,
+      'CHI-001 Post-Repair Verification',
+      'New scroll compressor installed and tested. Chiller output verified at 480 kW. COP = 3.2.',
+      'Monitor chiller performance for 72 hours post-repair. Log data every 4 hours.',
+      'LOW', 'REVIEWED')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Step 4: Work Orders (5+ entries, linked to equipment + users)
+  INSERT INTO public.work_orders (id, work_order_number, equipment_id, created_by, assigned_to, title, description, priority, status)
+  VALUES
+    ('d1000001-0000-0000-0000-000000000001', 'WO-2025-001', 'e1000001-0000-0000-0000-000000000002',
+      sup_id, tech_id,
+      'Replace Mechanical Seal on PUMP-201',
+      'Critical seal failure detected during inspection. Isolate pump, LOTO, replace Type-B mechanical seal. Pressure test to 250 bar before reinstatement.',
+      'CRITICAL', 'IN_PROGRESS'),
+    ('d1000001-0000-0000-0000-000000000002', 'WO-2025-002', 'e1000001-0000-0000-0000-000000000001',
+      sup_id, tech_id,
+      'Belt Replacement on MTR-102',
+      'Drive belt showing elongation beyond tolerance (3mm). Replace with OEM part #SIE-B-22X. Check alignment post-installation.',
+      'MEDIUM', 'OPEN'),
+    ('d1000001-0000-0000-0000-000000000003', 'WO-2025-003', 'e1000001-0000-0000-0000-000000000005',
+      tech_id, tech_id,
+      'HVAC-F3 Refrigerant Charge Inspection',
+      'Investigate cooling performance drop. Check refrigerant pressures at service ports, inspect expansion valve, check for blockages.',
+      'HIGH', 'OPEN'),
+    ('d1000001-0000-0000-0000-000000000004', 'WO-2025-004', 'e1000001-0000-0000-0000-000000000004',
+      sup_id, tech_id,
+      'GEN-B2 Annual Load Bank Test',
+      'Perform 4-hour load bank test at 80% and 100% rated capacity. Sample oil for analysis. Test automatic transfer switch.',
+      'MEDIUM', 'OPEN'),
+    ('d1000001-0000-0000-0000-000000000005', 'WO-2025-005', 'e1000001-0000-0000-0000-000000000006',
+      tech_id, tech_id,
+      'CHI-001 72-Hour Post-Repair Monitoring',
+      'Log chiller performance data every 4 hours. Record supply/return temperatures, COP, and compressor current. Report anomalies immediately.',
+      'LOW', 'CLOSED')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Step 5: Alerts (linked to inspections)
+  INSERT INTO public.alerts (equipment_id, inspection_report_id, severity, message, status)
+  VALUES
+    ('e1000001-0000-0000-0000-000000000002', 'a1000001-0000-0000-0000-000000000002',
+      'CRITICAL', 'PUMP-201: Active mechanical seal failure. Immediate shutdown and replacement required.', 'OPEN'),
+    ('e1000001-0000-0000-0000-000000000005', 'a1000001-0000-0000-0000-000000000004',
+      'HIGH', 'HVAC-F3: Supply air temperature exceeding setpoint by 4°C. Evaporator icing detected.', 'ACKNOWLEDGED'),
+    ('e1000001-0000-0000-0000-000000000001', NULL,
+      'HIGH', 'MTR-102: Drive belt elongation detected. Replacement required within 30 days.', 'OPEN')
+  ON CONFLICT DO NOTHING;
+
+  -- Step 6: Activity Logs (12 entries)
+  INSERT INTO public.activity_logs (user_id, action_type, entity_type, entity_id, description)
+  VALUES
+    (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000001', 'Queried repair history for MTR-102'),
+    (tech_id, 'CREATE_INSPECTION', 'inspection_report', 'a1000001-0000-0000-0000-000000000001', 'Created monthly PM inspection for MTR-102'),
+    (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000002', 'Queried pump status for PUMP-201'),
+    (tech_id, 'CREATE_INSPECTION', 'inspection_report', 'a1000001-0000-0000-0000-000000000002', 'Created critical inspection for PUMP-201 seal leak'),
+    (tech_id, 'CREATE_ALERT', 'alert', 'e1000001-0000-0000-0000-000000000002', 'Auto-alert generated for CRITICAL inspection on PUMP-201'),
+    (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000003', 'Queried compression history for COMP-001'),
+    (tech_id, 'CREATE_INSPECTION', 'inspection_report', 'a1000001-0000-0000-0000-000000000003', 'Completed quarterly inspection for COMP-001'),
+    (tech_id, 'CREATE_WORK_ORDER', 'work_order', 'd1000001-0000-0000-0000-000000000003', 'Created work order WO-2025-003 for HVAC-F3 refrigerant check'),
+    (tech_id, 'UPDATE_WORK_ORDER', 'work_order', 'd1000001-0000-0000-0000-000000000005', 'Closed work order WO-2025-005 for CHI-001 monitoring'),
+    (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000005', 'Queried HVAC-F3 maintenance history'),
+    (tech_id, 'CREATE_INSPECTION', 'inspection_report', 'a1000001-0000-0000-0000-000000000004', 'Created HIGH severity inspection for HVAC-F3 cooling drop'),
+    (sup_id, 'CREATE_WORK_ORDER', 'work_order', 'd1000001-0000-0000-0000-000000000001', 'Supervisor created CRITICAL work order WO-2025-001 for PUMP-201')
+  ON CONFLICT DO NOTHING;
+
+  -- Step 7: Transcripts (11 voice interactions)
+  INSERT INTO public.transcripts (user_id, user_prompt, agent_response, session_id, tools_used)
+  VALUES
+    (tech_id,
+      'What was the last repair on MTR-102?',
+      'The last repair on MTR-102 was an electrical fault on September 5th, 2025. A faulty capacitor bank was replaced, correcting the power factor to 0.95. The repair took 4 hours and cost $1,100.',
+      'sess-001', ARRAY['getEquipmentHistory']),
+    (tech_id,
+      'Create an inspection for PUMP-201. Mechanical seal is leaking. Severity critical.',
+      'Critical inspection created for PUMP-201. The mechanical seal leak has been logged with CRITICAL severity. A supervisor alert has been automatically generated. Work order WO-2025-001 has been assigned to you for seal replacement.',
+      'sess-001', ARRAY['createInspection', 'createAlert']),
+    (tech_id,
+      'Show my open work orders.',
+      'You have 3 open work orders. WO-2025-001 is CRITICAL priority for PUMP-201 seal replacement and is currently in progress. WO-2025-002 is MEDIUM priority for MTR-102 belt replacement. WO-2025-003 is HIGH priority for HVAC-F3 refrigerant inspection.',
+      'sess-002', ARRAY['getTechnicianWorkOrders']),
+    (tech_id,
+      'What is the repair history of COMP-001?',
+      'COMP-001 has 2 recorded repairs. In February 2025, air filters were replaced, improving compression ratio, costing $95. In June 2025, a faulty pressure relief valve was replaced and set to 8.5 bar, costing $560.',
+      'sess-002', ARRAY['getEquipmentHistory']),
+    (tech_id,
+      'Update work order WO-2025-005 to closed.',
+      'Work order WO-2025-005 for CHI-001 post-repair monitoring has been marked as closed. The 72-hour monitoring period is complete. Activity log updated.',
+      'sess-003', ARRAY['updateWorkOrder']),
+    (tech_id,
+      'What inspections are pending on HVAC-F3?',
+      'There is 1 open inspection for HVAC-F3. Inspection ID 4 was filed today for a cooling performance drop. Supply air temperature is 4°C above setpoint with evaporator icing detected. Severity is HIGH. Work order WO-2025-003 has been raised for investigation.',
+      'sess-003', ARRAY['getEquipmentHistory']),
+    (tech_id,
+      'Create work order for HVAC refrigerant check.',
+      'Work order WO-2025-003 has been created for HVAC-F3 refrigerant charge inspection. Priority is HIGH. The work order has been assigned to you. Please check refrigerant pressures at service ports and inspect the expansion valve.',
+      'sess-004', ARRAY['createWorkOrder']),
+    (tech_id,
+      'Show repair history of GEN-B2.',
+      'GEN-B2 has 1 recorded repair. In March 2025, starting batteries on the 24V system were replaced. A load test was performed and the generator passed at 100% rated output. The repair took 2 hours and cost $680.',
+      'sess-004', ARRAY['getEquipmentHistory']),
+    (tech_id,
+      'How many work orders do I have?',
+      'You currently have 4 work orders assigned. 1 is CRITICAL priority and in progress, 2 are open, and 1 has been closed.',
+      'sess-005', ARRAY['getTechnicianWorkOrders']),
+    (tech_id,
+      'What is the status of PUMP-201?',
+      'PUMP-201 is currently under maintenance. A critical mechanical seal failure was detected. Work order WO-2025-001 for seal replacement is currently in progress. Last repair was in May 2025 for pump cavitation, which was resolved by clearing air pockets and adjusting the inlet valve.',
+      'sess-005', ARRAY['getEquipmentHistory', 'getTechnicianWorkOrders']),
+    (tech_id,
+      'Create inspection for CHI-001 post repair. Severity low. All systems normal.',
+      'Inspection created for CHI-001 post-repair verification. Severity is LOW. The chiller output has been verified at 480 kW with a COP of 3.2. Inspection status is set to REVIEWED.',
+      'sess-006', ARRAY['createInspection'])
+  ON CONFLICT DO NOTHING;
+
+  -- Step 8: Equipment Documents (linked)
+  INSERT INTO public.equipment_documents (equipment_id, document_name, document_type, document_text)
+  VALUES
+    ('e1000001-0000-0000-0000-000000000001', 'MTR-102 Operation Manual', 'MANUAL',
+      'Siemens Conveyor Motor MTR-102 Operation Manual. Rated voltage: 415V 3-phase. Rated current: 20A. Speed: 1480 RPM. To reset thermal overload, press the blue reset button for 3 seconds after motor has cooled. Bearing replacement interval: 8000 hours.'),
+    ('e1000001-0000-0000-0000-000000000002', 'PUMP-201 Maintenance Schedule', 'MAINTENANCE_GUIDE',
+      'Grundfos Hydraulic Pump PUMP-201 Maintenance Schedule. Seal replacement interval: 2 years or 6000 hours. Oil change: every 2000 hours. Alignment check: every 6 months. Recommended seal type: Type-B mechanical seal. System operating pressure: 200 bar.'),
+    ('e1000001-0000-0000-0000-000000000003', 'COMP-001 Service Guide', 'MAINTENANCE_GUIDE',
+      'Atlas Copco Air Compressor COMP-001 Service Guide. Operating pressure: 8.5 bar. Air filter replacement: every 2000 hours or 6 months. Oil change: every 4000 hours. Belt inspection: every 1000 hours. To reset alarm: hold ALT button for 5 seconds.')
+  ON CONFLICT DO NOTHING;
+
+END $$;

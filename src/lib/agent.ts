@@ -4,7 +4,7 @@ import { getAgentTools } from "./agent-tools";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { AuthenticatedRequestUser } from "@/lib/api/middleware";
-import { createVoiceTranscript } from "@/services/phase2.service";
+import { createVoiceTranscript } from "@/services/operations.service";
 
 // We will instantiate the client inside the function to prevent test crashes
 // when OPENAI_API_KEY is not defined in the test environment.
@@ -79,6 +79,7 @@ export async function processVoiceQuery(
     userPrompt,
     sessionId,
     toolsUsed,
+    agentResponse: rawResponse,
   });
 
   return {

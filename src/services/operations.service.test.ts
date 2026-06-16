@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { canAdvanceWorkOrderStatus, workOrderStatusSchema } from "@/lib/phase2";
+import { canAdvanceWorkOrderStatus, workOrderStatusSchema } from "@/lib/operations.validation";
 import {
   getEquipmentHistory,
   createInspection,
@@ -10,7 +10,7 @@ import {
   processOfflineQueue,
   getTechnicianDashboard,
   getSupervisorDashboard,
-} from "./phase2.service";
+} from "./operations.service";
 import { ValidationError, ForbiddenError } from "@/lib/errors";
 import type { AuthenticatedRequestUser } from "@/lib/api/middleware";
 
@@ -18,7 +18,7 @@ vi.mock("@/lib/agent", () => ({
   processVoiceQuery: vi.fn().mockResolvedValue({ agentResponse: "Mock response" }),
 }));
 
-describe("phase2 helpers", () => {
+describe("operations validation helpers", () => {
   it("allows forward work order transitions", () => {
     expect(canAdvanceWorkOrderStatus("OPEN", "IN_PROGRESS")).toBe(true);
     expect(canAdvanceWorkOrderStatus("IN_PROGRESS", "CLOSED")).toBe(true);
@@ -37,11 +37,23 @@ describe("phase2 helpers", () => {
 function createMockSupabase() {
   const mockFrom = vi.fn();
   const mockRpc = vi.fn();
+
+  const createQueryBuilder = (resolvedValue: any = { data: [], error: null }) => {
+    const builder = {} as any;
+    const methods = ["select", "eq", "neq", "or", "in", "order", "limit", "maybeSingle", "single"];
+    methods.forEach((method) => {
+      builder[method] = vi.fn().mockImplementation(() => builder);
+    });
+    builder.then = (onfulfilled: any) => Promise.resolve(resolvedValue).then(onfulfilled);
+    return builder;
+  };
+
   const supabase = {
     from: mockFrom,
     rpc: mockRpc,
   } as unknown as SupabaseClient<any>;
-  return { supabase, mockFrom, mockRpc };
+
+  return { supabase, mockFrom, mockRpc, createQueryBuilder };
 }
 
 const techUser: AuthenticatedRequestUser = {
@@ -62,13 +74,8 @@ const supUser: AuthenticatedRequestUser = {
 
 describe("getEquipmentHistory", () => {
   it("returns parsed equipment history", async () => {
-    const { supabase, mockFrom } = createMockSupabase();
-    const limit = vi.fn().mockResolvedValue({ data: [{ id: "repair-1" }], error: null });
-    const order2 = vi.fn().mockReturnValue({ limit });
-    const order1 = vi.fn().mockReturnValue({ order: order2 });
-    const eq = vi.fn().mockReturnValue({ order: order1 });
-    const select = vi.fn().mockReturnValue({ eq });
-    mockFrom.mockReturnValue({ select });
+    const { supabase, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: [{ id: "repair-1" }], error: null }));
 
     const result = await getEquipmentHistory(supabase, { equipmentId: "00000000-0000-0000-0000-000000000000", limit: 10 });
     expect(result.count).toBe(1);
@@ -114,14 +121,8 @@ describe("createInspection", () => {
 
 describe("createWorkOrder", () => {
   it("calls create_work_order_tx RPC for technicians", async () => {
-    const { supabase, mockRpc, mockFrom } = createMockSupabase();
-    
-    // Mock user exists check
-    const maybeSingle = vi.fn().mockResolvedValue({ data: { id: techUser.id }, error: null });
-    const eq = vi.fn().mockReturnValue({ maybeSingle });
-    const select = vi.fn().mockReturnValue({ eq });
-    mockFrom.mockReturnValue({ select });
-
+    const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: techUser.id }, error: null }));
     mockRpc.mockResolvedValue({
       data: { workOrder: { id: "wo-1" } },
       error: null,
@@ -141,14 +142,8 @@ describe("createWorkOrder", () => {
 
 describe("updateWorkOrder", () => {
   it("calls update_work_order_tx RPC", async () => {
-    const { supabase, mockRpc, mockFrom } = createMockSupabase();
-
-    // Mock existing work order
-    const maybeSingle = vi.fn().mockResolvedValue({ data: { id: "00000000-0000-0000-0000-000000000000", status: "OPEN", created_by: techUser.id }, error: null });
-    const eq = vi.fn().mockReturnValue({ maybeSingle });
-    const select = vi.fn().mockReturnValue({ eq });
-    mockFrom.mockReturnValue({ select });
-
+    const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: "00000000-0000-0000-0000-000000000000", status: "OPEN", created_by: techUser.id }, error: null }));
     mockRpc.mockResolvedValue({
       data: { workOrder: { id: "wo-1", status: "IN_PROGRESS" }, previousStatus: "OPEN" },
       error: null,
@@ -183,12 +178,8 @@ describe("createVoiceTranscript", () => {
 
 describe("processOfflineQueue", () => {
   it("processes offline queue operations", async () => {
-    const { supabase, mockRpc, mockFrom } = createMockSupabase();
-
-    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: { id: "user-1" }, error: null });
-    const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-    mockFrom.mockReturnValue({ select: mockSelect });
+    const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: "user-1" }, error: null }));
 
     mockRpc.mockImplementation((name) => {
       if (name === "create_inspection_tx") {
@@ -229,13 +220,8 @@ describe("processOfflineQueue", () => {
   });
 
   it("handles operation execution errors gracefully", async () => {
-    const { supabase, mockRpc, mockFrom } = createMockSupabase();
-
-    const mockMaybeSingle = vi.fn().mockResolvedValue({ data: { id: "user-1" }, error: null });
-    const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
-    mockFrom.mockReturnValue({ select: mockSelect });
-
+    const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: "user-1" }, error: null }));
     mockRpc.mockResolvedValue({ data: null, error: { message: "DB Error" } });
 
     const result = await processOfflineQueue(supabase, techUser, {
@@ -256,25 +242,16 @@ describe("processOfflineQueue", () => {
 
 describe("dashboards", () => {
   it("technician dashboard fetches relevant data", async () => {
-    const { supabase, mockFrom } = createMockSupabase();
-    
-    const limit = vi.fn().mockResolvedValue({ data: [], error: null });
-    const order = vi.fn().mockReturnValue({ limit });
-    const orEq = vi.fn().mockReturnValue({ order });
-    const select = vi.fn().mockReturnValue({ or: orEq, eq: orEq });
-    mockFrom.mockReturnValue({ select });
+    const { supabase, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: [], error: null }));
 
     const result = await getTechnicianDashboard(supabase, techUser);
     expect(result.counts.workOrders).toBe(0);
   });
 
   it("supervisor dashboard fetches relevant data", async () => {
-    const { supabase, mockFrom } = createMockSupabase();
-    
-    const limit = vi.fn().mockResolvedValue({ data: [], error: null });
-    const order = vi.fn().mockReturnValue({ limit });
-    const select = vi.fn().mockReturnValue({ order });
-    mockFrom.mockReturnValue({ select });
+    const { supabase, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({ data: [], error: null }));
 
     const result = await getSupervisorDashboard(supabase, supUser);
     expect(result.counts.workOrders).toBe(0);

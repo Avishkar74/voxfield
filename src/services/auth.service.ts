@@ -27,6 +27,25 @@ export async function signUpWithEmail(
   supabase: SupabaseClient<Database>,
   input: SignUpInput,
 ): Promise<{ requiresEmailConfirmation: boolean }> {
+  // If running in browser/client-side, delegate to the signup API endpoint to bypass verification
+  if (typeof window !== "undefined") {
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ValidationError(errorData.error || "Failed to create account");
+    }
+
+    const resJson = await response.json();
+    return resJson.data || resJson;
+  }
+
   const parsed = signUpSchema.safeParse({
     email: input.email,
     password: input.password,

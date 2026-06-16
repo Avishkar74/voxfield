@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { processVoiceQuery } from "@/lib/agent";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import {
   ForbiddenError,
@@ -22,7 +23,7 @@ import {
   type SyncOfflineQueueInput,
   type UpdateWorkOrderInput,
   type VoiceQueryInput,
-} from "@/lib/phase2";
+} from "@/lib/operations.validation";
 import type { AuthenticatedRequestUser } from "@/lib/api/middleware";
 import type {
   ActivityLog,
@@ -69,6 +70,11 @@ export interface OfflineSyncResult {
   message: string;
 }
 
+export interface EquipmentSuggestion {
+  text: string;
+  category: "repair_history" | "work_order" | "inspection";
+}
+
 export interface TechnicianDashboardResult {
   user: AuthenticatedRequestUser;
   counts: {
@@ -84,6 +90,8 @@ export interface TechnicianDashboardResult {
   inspections: InspectionReport[];
   transcripts: Transcript[];
   activityLogs: ActivityLog[];
+  /** Contextual AI suggestions generated from real DB relationships */
+  equipmentSuggestions: EquipmentSuggestion[];
 }
 
 export interface SupervisorDashboardResult {
@@ -115,8 +123,6 @@ export interface SupervisorDashboardResult {
 const VOICE_PLACEHOLDER_RESPONSE =
   "Voice agent is not available yet. Your request was recorded and will be handled once Phase 3 is enabled.";
 
-
-
 async function assertUserExists(
   adminClient: SupabaseClient<Database>,
   userId: string,
@@ -137,8 +143,6 @@ async function assertUserExists(
 
   return data;
 }
-
-
 
 function summarizeWorkOrders(workOrders: WorkOrder[]) {
   return workOrders.reduce(
@@ -426,10 +430,34 @@ export async function createVoiceTranscript(
     throw new ValidationError(error?.message ?? "Unable to save transcript");
   }
 
+  const transcriptId = data.transcriptId as string;
+  const agentResponse = normalized.data.agentResponse;
+
+  if (agentResponse && transcriptId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const realAdminClient = createAdminClient();
+      await (realAdminClient.from("transcripts") as any)
+        .update({
+          agent_response: agentResponse,
+          tools_used: normalized.data.toolsUsed ?? null,
+        })
+        .eq("id", transcriptId);
+
+      await (realAdminClient.from("activity_logs") as any)
+        .update({
+          description: `Voice Query: "${normalized.data.userPrompt.slice(0, 60)}${normalized.data.userPrompt.length > 60 ? "..." : ""}"`,
+        })
+        .eq("entity_id", transcriptId)
+        .eq("action_type", "VOICE_QUERY");
+    } catch (updateError) {
+      console.warn("Failed to update voice transcript placeholder with real agent response:", updateError);
+    }
+  }
+
   return {
-    placeholder: data.placeholder as boolean,
-    agentResponse: data.agentResponse as string,
-    transcriptId: data.transcriptId as string,
+    placeholder: !agentResponse,
+    agentResponse: agentResponse ?? (data.agentResponse as string),
+    transcriptId,
     sessionId: data.sessionId as string,
   };
 }
@@ -500,11 +528,100 @@ export async function processOfflineQueue(
   };
 }
 
+/**
+ * Generate contextual AI voice suggestions based on actual DB relationships.
+ * Only generates suggestions for equipment that has related records —
+ * never generates suggestions for entities that have no data.
+ */
+async function generateEquipmentSuggestions(
+  supabase: SupabaseClient<Database>,
+  technicianId: string,
+): Promise<EquipmentSuggestion[]> {
+  const suggestions: EquipmentSuggestion[] = [];
+
+  // Fetch equipment IDs linked to this technician's work orders and inspections
+  const [woResult, inspResult, repairResult] = await Promise.all([
+    supabase
+      .from("work_orders")
+      .select("equipment_id, status")
+      .or(`created_by.eq.${technicianId},assigned_to.eq.${technicianId}`)
+      .in("status", ["OPEN", "IN_PROGRESS"])
+      .limit(5),
+    supabase
+      .from("inspection_reports")
+      .select("equipment_id, status")
+      .eq("technician_id", technicianId)
+      .in("status", ["OPEN", "REVIEWED"])
+      .limit(5),
+    supabase
+      .from("repair_history")
+      .select("equipment_id")
+      .limit(5),
+  ]);
+
+  // Collect unique equipment IDs from work orders and inspections
+  const woEquipIds = [...new Set((woResult.data as Array<{ equipment_id: string; status: string }> ?? []).map((r) => r.equipment_id).filter(Boolean))];
+  const inspEquipIds = [...new Set((inspResult.data as Array<{ equipment_id: string; status: string }> ?? []).map((r) => r.equipment_id).filter(Boolean))];
+  const repairEquipIds = [...new Set((repairResult.data as Array<{ equipment_id: string }> ?? []).map((r) => r.equipment_id).filter(Boolean))];
+
+  const allEquipIds = [...new Set([...woEquipIds, ...inspEquipIds, ...repairEquipIds])];
+
+  if (allEquipIds.length === 0) {
+    return suggestions; // No data — return empty, no fake suggestions
+  }
+
+  // Fetch equipment codes for the collected IDs
+  const { data: equipmentData } = await supabase
+    .from("equipment")
+    .select("id, equipment_code")
+    .in("id", allEquipIds)
+    .limit(6);
+
+  const equipMap = new Map((equipmentData as Array<{ id: string; equipment_code: string }> ?? []).map((e) => [e.id, e.equipment_code]));
+
+  // Generate suggestions only for entities with actual related records
+  // Priority 1: Open/in-progress work orders (most urgent)
+  for (const equipId of woEquipIds.slice(0, 2)) {
+    const code = equipMap.get(equipId);
+    if (code) {
+      suggestions.push({
+        text: `Show open work orders for ${code}`,
+        category: "work_order",
+      });
+    }
+  }
+
+  // Priority 2: Open inspection reports
+  for (const equipId of inspEquipIds.slice(0, 1)) {
+    const code = equipMap.get(equipId);
+    if (code) {
+      suggestions.push({
+        text: `What inspections are pending on ${code}?`,
+        category: "inspection",
+      });
+    }
+  }
+
+  // Priority 3: Equipment with repair history
+  for (const equipId of repairEquipIds.slice(0, 2)) {
+    const code = equipMap.get(equipId);
+    if (code && !woEquipIds.includes(equipId) && !inspEquipIds.includes(equipId)) {
+      suggestions.push({
+        text: `Show repair history of ${code}`,
+        category: "repair_history",
+      });
+    }
+  }
+
+  // Cap at 4 suggestions
+  return suggestions.slice(0, 4);
+}
+
 export async function getTechnicianDashboard(
   supabase: SupabaseClient<Database>,
   currentUser: AuthenticatedRequestUser,
 ): Promise<TechnicianDashboardResult> {
-  const [workOrdersResult, inspectionsResult, transcriptsResult, logsResult] =
+  const [workOrdersResult, inspectionsResult, transcriptsResult, logsResult, equipmentSuggestions] =
     await Promise.all([
       supabase
         .from("work_orders")
@@ -522,14 +639,17 @@ export async function getTechnicianDashboard(
         .from("transcripts")
         .select("*")
         .eq("user_id", currentUser.id)
+        .neq("agent_response", "Voice agent is not available yet. Your request was recorded and will be handled once Phase 3 is enabled.")
         .order("created_at", { ascending: false })
         .limit(10),
       supabase
         .from("activity_logs")
         .select("*")
         .eq("user_id", currentUser.id)
+        .neq("description", "Stored a placeholder voice query response")
         .order("created_at", { ascending: false })
-        .limit(10),
+        .limit(15),
+      generateEquipmentSuggestions(supabase, currentUser.id),
     ]);
 
   if (workOrdersResult.error) throw new ValidationError(workOrdersResult.error.message);
@@ -556,6 +676,7 @@ export async function getTechnicianDashboard(
     inspections,
     transcripts,
     activityLogs,
+    equipmentSuggestions,
   };
 }
 
@@ -568,8 +689,8 @@ export async function getSupervisorDashboard(
       supabase.from("work_orders").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("inspection_reports").select("*").order("created_at", { ascending: false }).limit(20),
       supabase.from("alerts").select("*").order("created_at", { ascending: false }).limit(20),
-      supabase.from("transcripts").select("*").order("created_at", { ascending: false }).limit(20),
-      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(20),
+      supabase.from("transcripts").select("*").neq("agent_response", "Voice agent is not available yet. Your request was recorded and will be handled once Phase 3 is enabled.").order("created_at", { ascending: false }).limit(20),
+      supabase.from("activity_logs").select("*").neq("description", "Stored a placeholder voice query response").order("created_at", { ascending: false }).limit(20),
     ]);
 
   if (workOrdersResult.error) throw new ValidationError(workOrdersResult.error.message);

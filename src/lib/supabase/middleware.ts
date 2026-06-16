@@ -50,8 +50,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthRoute) {
+    const role = user.user_metadata?.role || "TECHNICIAN";
     const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/technician";
+    dashboardUrl.pathname = role === "SUPERVISOR" ? "/supervisor" : "/technician";
     return NextResponse.redirect(dashboardUrl);
   }
 

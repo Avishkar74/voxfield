@@ -52,14 +52,11 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+      <div className="p-5 border-b border-gray-100">
         <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
           <Activity className="w-5 h-5 text-[#D14923]" />
           Recent Activity
         </h2>
-        <button className="text-[#D14923] hover:text-[#B73D1C] text-xs font-bold transition">
-          View all
-        </button>
       </div>
 
       <div className="divide-y divide-gray-100">
@@ -74,11 +71,19 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                 {getActivityIcon(log.entity_type)}
               </div>
               
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-semibold text-gray-800 truncate group-hover:text-[#D14923] transition-colors">
-                  {formatActivityMessage(log)}
-                </h3>
-                <p className="text-xs text-gray-400 mt-0.5">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#D14923] bg-[#FAF0ED] px-2 py-0.5 rounded-md border border-[#FAF0ED]">
+                    {log.action_type.replace(/_/g, " ")}
+                  </span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                    {log.entity_type.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-gray-800 leading-relaxed">
+                  {log.description}
+                </p>
+                <p className="text-[10px] text-gray-400 font-medium">
                   <FormattedDate date={log.created_at} includeTime={true} />
                 </p>
               </div>

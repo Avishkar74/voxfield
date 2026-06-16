@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Mic, Square, Loader2, Volume2, AlertCircle } from "lucide-react";
+import { Mic, Square, Loader2, Volume2, AlertCircle, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useVoiceAgent } from "@/hooks/useVoiceAgent";
-import { useAuth } from "@/hooks/use-auth";
+import type { EquipmentSuggestion } from "@/services/operations.service";
 
-export function VoiceInput() {
-  const { user } = useAuth();
+interface VoiceInputProps {
+  /** Dynamic suggestions generated from real DB relationships. May be empty if no data exists. */
+  suggestions?: EquipmentSuggestion[];
+}
+
+export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
   const {
     agentState,
     transcript,
@@ -20,22 +24,6 @@ export function VoiceInput() {
   } = useVoiceAgent();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isTechnician = user?.role === "TECHNICIAN";
-
-  // Prompt chips matching the visual layout reference
-  const promptChips = isTechnician
-    ? [
-        "Show my open work orders",
-        "What inspections are due today?",
-        "Show repair history of an equipment",
-        "Update work order status",
-      ]
-    : [
-        "Show all open work orders",
-        "Show high priority alerts",
-        "Work order summary this week",
-        "Equipment with issues",
-      ];
 
   useEffect(() => {
     let animationFrameId: number;
@@ -45,10 +33,10 @@ export function VoiceInput() {
     if (!ctx) return;
 
     const analyser = getAnalyser();
-    
+
     const draw = () => {
       animationFrameId = requestAnimationFrame(draw);
-      
+
       const width = canvas.width;
       const height = canvas.height;
       ctx.clearRect(0, 0, width, height);
@@ -58,8 +46,8 @@ export function VoiceInput() {
         const dataArray = new Uint8Array(bufferLength);
         analyser.getByteTimeDomainData(dataArray);
 
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "#D14923"; // Terracotta orange-red wave
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "#D14923";
         ctx.beginPath();
 
         const sliceWidth = (width * 1.0) / bufferLength;
@@ -68,20 +56,15 @@ export function VoiceInput() {
         for (let i = 0; i < bufferLength; i++) {
           const v = dataArray[i] / 128.0;
           const y = (v * height) / 2;
-
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
           x += sliceWidth;
         }
 
         ctx.lineTo(canvas.width, canvas.height / 2);
         ctx.stroke();
       } else {
-        // Draw flat line when idle
+        // Flat idle line
         ctx.lineWidth = 1.5;
         ctx.strokeStyle = "rgba(209, 73, 35, 0.15)";
         ctx.beginPath();
@@ -92,43 +75,38 @@ export function VoiceInput() {
     };
 
     draw();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
+    return () => cancelAnimationFrame(animationFrameId);
   }, [agentState, getAnalyser]);
 
   const handleToggle = () => {
-    if (agentState === "IDLE" || agentState === "ERROR") {
-      startListening();
-    } else if (agentState === "LISTENING") {
-      stopListening();
-    }
+    if (agentState === "IDLE" || agentState === "ERROR") startListening();
+    else if (agentState === "LISTENING") stopListening();
   };
 
-  const handleChipClick = (chipText: string) => {
+  const handleChipClick = (text: string) => {
     if (agentState !== "PROCESSING" && agentState !== "SPEAKING") {
-      submitTextQuery(chipText);
+      submitTextQuery(text);
     }
   };
 
   return (
     <div className="w-full bg-white border border-gray-200 rounded-3xl shadow-sm p-6 md:p-8 flex flex-col items-center space-y-6 md:space-y-8">
-      {/* Header Info */}
-      <div className="text-center space-y-1">
-        <div className="flex items-center justify-center space-x-2">
-          <h3 className="text-lg font-bold text-gray-900">AI Voice Assistant</h3>
+      {/* Header */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <h2 className="text-base font-bold text-gray-900 tracking-tight">Voice Assistant Ready</h2>
           <span className="bg-[#FAF0ED] text-[#D14923] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-[#FAF0ED]">
             BETA
           </span>
         </div>
-        <p className="text-sm text-gray-500">Speak naturally. I'll handle the rest.</p>
+        <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest">
+          System Online
+        </p>
       </div>
 
-      {/* Mic/Visual Area */}
+      {/* Mic + waveform area */}
       <div className="relative flex items-center justify-center w-full max-w-xs h-40">
-        
-        {/* Pulsing ring waves under the button when listening/speaking */}
         {(agentState === "LISTENING" || agentState === "SPEAKING") && (
           <>
             <div className="absolute inset-0 rounded-full bg-[#D14923]/5 animate-ping" />
@@ -137,7 +115,6 @@ export function VoiceInput() {
           </>
         )}
 
-        {/* Big recording button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -164,32 +141,32 @@ export function VoiceInput() {
         </motion.button>
       </div>
 
-      {/* Button Helper State Text */}
-      <div className="text-center">
+      {/* State label */}
+      <div className="text-center -mt-2">
         {agentState === "LISTENING" ? (
-          <p className="text-sm font-semibold text-red-500">Tap to stop</p>
+          <p className="text-sm font-semibold text-red-500">Tap to stop recording</p>
         ) : agentState === "PROCESSING" ? (
-          <p className="text-sm font-semibold text-gray-500">Processing request...</p>
+          <p className="text-sm font-semibold text-gray-500">Processing your request…</p>
         ) : agentState === "SPEAKING" ? (
-          <p className="text-sm font-semibold text-[#D14923]">Assistant is speaking...</p>
+          <p className="text-sm font-semibold text-[#D14923]">Assistant is responding…</p>
         ) : (
           <p className="text-sm font-semibold text-[#D14923]">Tap to speak</p>
         )}
       </div>
 
-      {/* Real-time Oscilloscope Waveform Canvas */}
+      {/* Waveform canvas */}
       <div className="w-full max-w-sm h-12 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center px-4">
         <canvas ref={canvasRef} className="w-full h-8" width={300} height={32} />
       </div>
 
-      {/* Error and Result Feedback Section */}
+      {/* Error and result feedback */}
       {(error || transcript || agentResponse) && (
-        <div className="w-full border-t border-gray-100 pt-6 space-y-4">
+        <div className="w-full border-t border-gray-100 pt-5 space-y-3">
           {error && (
             <div className="flex items-start space-x-3 bg-red-50 border border-red-100 p-4 rounded-2xl text-red-600 text-sm">
               <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
               <div className="space-y-1">
-                <p className="font-semibold">Playback/Audio Notice</p>
+                <p className="font-semibold">Error</p>
                 <p className="font-medium text-red-500">{error}</p>
               </div>
             </div>
@@ -197,36 +174,43 @@ export function VoiceInput() {
 
           {transcript && (
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">You said</p>
-              <p className="text-sm text-gray-800 font-semibold italic">"{transcript}"</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">You</p>
+              <p className="text-sm text-gray-800 font-medium italic">"{transcript}"</p>
             </div>
           )}
 
           {agentResponse && (
             <div className="bg-[#FAF0ED] p-4 rounded-2xl border border-[#FAF0ED]">
-              <p className="text-xs font-semibold text-[#D14923] uppercase tracking-wider mb-1">VoxField AI</p>
+              <p className="text-[10px] font-bold text-[#D14923] uppercase tracking-widest mb-1">VoxField AI</p>
               <p className="text-sm text-gray-900 font-medium leading-relaxed">{agentResponse}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Prompt chips section from the visual design */}
-      <div className="w-full border-t border-gray-100 pt-6 space-y-3">
-        <p className="text-xs font-bold text-gray-400 text-center uppercase tracking-wider">Try saying:</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-          {promptChips.map((chipText) => (
-            <button
-              key={chipText}
-              onClick={() => handleChipClick(chipText)}
-              disabled={agentState === "PROCESSING" || agentState === "SPEAKING"}
-              className="px-4 py-3 bg-[#FAF9F5] border border-gray-200 hover:border-[#D14923] text-gray-700 hover:text-[#D14923] rounded-2xl text-xs font-semibold transition-all duration-200 text-left line-clamp-2 leading-tight disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {chipText}
-            </button>
-          ))}
+      {/* Dynamic suggestions — only shown if DB has related records */}
+      {suggestions.length > 0 && (
+        <div className="w-full border-t border-gray-100 pt-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-[#D14923]" />
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Suggested queries
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+            {suggestions.map((s) => (
+              <button
+                key={s.text}
+                onClick={() => handleChipClick(s.text)}
+                disabled={agentState === "PROCESSING" || agentState === "SPEAKING"}
+                className="px-4 py-3 bg-[#FAF9F5] border border-gray-200 hover:border-[#D14923] text-gray-700 hover:text-[#D14923] rounded-2xl text-xs font-semibold transition-all duration-200 text-left leading-tight disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {s.text}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

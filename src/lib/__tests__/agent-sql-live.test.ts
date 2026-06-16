@@ -26,7 +26,7 @@ describe.runIf(hasEnvVars)("Agent Text-to-SQL Live Integration", () => {
 
   it("should answer a dynamic query by executing a read-only SQL query", async () => {
     // A query that cannot be answered by predefined tools, requiring dynamic SQL
-    const prompt = "How many total work orders are currently OPEN or IN_PROGRESS in the system?";
+    const prompt = "Which equipment manufacturer has the highest number of repair history records in the system?";
     
     const result = await processVoiceQuery(
       supabase,

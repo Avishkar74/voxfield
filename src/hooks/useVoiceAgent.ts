@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 export type AgentState = "IDLE" | "LISTENING" | "PROCESSING" | "SPEAKING" | "ERROR";
 
 export function useVoiceAgent() {
+  const router = useRouter();
   const [agentState, setAgentState] = useState<AgentState>("IDLE");
   const [transcript, setTranscript] = useState<string>("");
   const [agentResponse, setAgentResponse] = useState<string>("");
@@ -135,6 +137,9 @@ export function useVoiceAgent() {
       const reply = queryData.data.agentResponse;
       setAgentResponse(reply);
 
+      // Refresh page data immediately
+      router.refresh();
+
       // 3. TTS — synthesize and play
       const ttsRes = await fetch("/api/tts", {
         method: "POST",
@@ -173,6 +178,9 @@ export function useVoiceAgent() {
       const reply = queryData.data.agentResponse;
       setAgentResponse(reply);
 
+      // Refresh page data immediately
+      router.refresh();
+
       // 2. TTS — synthesize and play
       const ttsRes = await fetch("/api/tts", {
         method: "POST",
@@ -188,7 +196,7 @@ export function useVoiceAgent() {
       setAgentState("ERROR");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   const getAnalyser = useCallback(() => {
     return analyserRef.current;

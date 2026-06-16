@@ -1,5 +1,6 @@
-import { requireAuth, requireRole } from "@/lib/api/middleware";
-import { getSupervisorDashboard } from "@/services/phase2.service";
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/api/middleware";
+import { getSupervisorDashboard } from "@/services/operations.service";
 import { VoiceInput } from "@/components/voice/VoiceInput";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { WorkOrdersKanban } from "@/components/dashboard/WorkOrdersKanban";
@@ -12,7 +13,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SupervisorDashboardPage() {
   const user = await requireAuth();
-  requireRole(user, ["SUPERVISOR"]);
+  if (user.role !== "SUPERVISOR") {
+    redirect("/technician");
+  }
 
   const supabase = await createClient();
   const data = await getSupervisorDashboard(supabase, user);

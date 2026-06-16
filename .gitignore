@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Documentation and tracking files
+PRD.md
+TRD.md
+Rules.md
+Tracker.md
+DESIGN_ARTIFACTS.md
+ImplementationPlan.md
+CLAUDE.md
+AGENTS.md
+agent_tooling_review.md

@@ -1,17 +1,21 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/use-auth";
 
 export function SignOutButton() {
-  const router = useRouter();
   const { signOut, isLoading } = useAuth();
 
   async function handleSignOut() {
-    await signOut();
-    router.replace("/login");
+    try {
+      await signOut();
+    } catch {
+      // Sign out error is non-critical — redirect anyway
+    } finally {
+      // Use a full page navigation to ensure session cookies are cleared
+      // and no stale auth state remains in memory.
+      window.location.href = "/login";
+    }
   }
 
   return (

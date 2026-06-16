@@ -43,7 +43,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock("@/services/phase2.service", () => ({
+vi.mock("@/services/operations.service", () => ({
   createInspection: vi.fn(),
   createWorkOrder: vi.fn(),
   updateWorkOrder: vi.fn(),
@@ -89,7 +89,7 @@ describe("API Endpoints", () => {
   };
 
   it("POST /api/inspections/create", async () => {
-    const { createInspection: mockService } = await import("@/services/phase2.service");
+    const { createInspection: mockService } = await import("@/services/operations.service");
     vi.mocked(mockService).mockResolvedValue({ inspection: { id: "1" } as any, alertCreated: false });
 
     const req = createRequest({ equipmentId: "00000000-0000-0000-0000-000000000000", title: "Test", description: "Desc", severity: "LOW" });
@@ -100,7 +100,7 @@ describe("API Endpoints", () => {
   });
 
   it("POST /api/work-orders/create", async () => {
-    const { createWorkOrder: mockService } = await import("@/services/phase2.service");
+    const { createWorkOrder: mockService } = await import("@/services/operations.service");
     vi.mocked(mockService).mockResolvedValue({ workOrder: { id: "2" } as any });
 
     const req = createRequest({ equipmentId: "00000000-0000-0000-0000-000000000000", title: "Test", description: "Desc", priority: "LOW" });
@@ -111,7 +111,7 @@ describe("API Endpoints", () => {
   });
 
   it("PATCH /api/work-orders/[id]", async () => {
-    const { updateWorkOrder: mockService } = await import("@/services/phase2.service");
+    const { updateWorkOrder: mockService } = await import("@/services/operations.service");
     vi.mocked(mockService).mockResolvedValue({ workOrder: { id: "3" } as any, previousStatus: "OPEN" });
 
     const req = new NextRequest("http://localhost/api", { method: "PATCH", body: JSON.stringify({ status: "CLOSED" }) });
@@ -122,7 +122,7 @@ describe("API Endpoints", () => {
   });
 
   it("GET /api/equipment/[id]/history", async () => {
-    const { getEquipmentHistory: mockService } = await import("@/services/phase2.service");
+    const { getEquipmentHistory: mockService } = await import("@/services/operations.service");
     vi.mocked(mockService).mockResolvedValue({ equipmentId: "00000000-0000-0000-0000-000000000000", count: 0, items: [] });
 
     const req = createRequest(undefined, "http://localhost/api?limit=5");
@@ -144,7 +144,7 @@ describe("API Endpoints", () => {
   });
 
   it("POST /api/sync-offline-queue", async () => {
-    const { processOfflineQueue: mockService } = await import("@/services/phase2.service");
+    const { processOfflineQueue: mockService } = await import("@/services/operations.service");
     vi.mocked(mockService).mockResolvedValue({ processed: 1, failed: 0, skipped: 0, message: "ok" });
 
     const req = createRequest({ items: [] });
@@ -153,8 +153,8 @@ describe("API Endpoints", () => {
   });
 
   it("GET /api/dashboard/technician", async () => {
-    const { getTechnicianDashboard: mockService } = await import("@/services/phase2.service");
-    vi.mocked(mockService).mockResolvedValue({ user: {} as any, counts: {} as any, workOrders: [], inspections: [], transcripts: [], activityLogs: [] });
+    const { getTechnicianDashboard: mockService } = await import("@/services/operations.service");
+    vi.mocked(mockService).mockResolvedValue({ user: {} as any, counts: {} as any, workOrders: [], inspections: [], transcripts: [], activityLogs: [], equipmentSuggestions: [] });
 
     const req = createRequest();
     const res = await techDashboard(req, {});
@@ -171,7 +171,7 @@ describe("API Endpoints", () => {
 
   it("GET /api/dashboard/supervisor returns 200 for supervisor", async () => {
     vi.mocked(requireAuth).mockResolvedValue({ id: "1", role: "SUPERVISOR" } as any);
-    const { getSupervisorDashboard: mockService } = await import("@/services/phase2.service");
+    const { getSupervisorDashboard: mockService } = await import("@/services/operations.service");
     vi.mocked(mockService).mockResolvedValue({ user: {} as any, counts: {} as any, workOrders: [], inspections: [], alerts: [], transcripts: [], activityLogs: [] });
 
     const req = createRequest();

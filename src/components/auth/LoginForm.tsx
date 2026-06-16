@@ -30,6 +30,7 @@ export function LoginForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isLoading) return;
     setFormError(null);
     setSuccessMessage(null);
     clearError();
@@ -48,11 +49,19 @@ export function LoginForm() {
         const { user: signedInUser } = await signIn(parsed.data);
         // Use full page navigation to ensure the new session cookie is sent
         // with the first request — router.replace() won't send the new cookie.
-        const destination = redirectTo && redirectTo !== "/dashboard"
-          ? redirectTo
-          : signedInUser?.role === "SUPERVISOR"
-          ? "/supervisor"
-          : "/technician";
+        let destination = redirectTo && redirectTo !== "/dashboard" ? redirectTo : "";
+
+        // Role-based destination enforcement to prevent 403 Forbidden redirects
+        if (signedInUser?.role === "SUPERVISOR" && destination.includes("/technician")) {
+          destination = "/supervisor";
+        } else if (signedInUser?.role === "TECHNICIAN" && destination.includes("/supervisor")) {
+          destination = "/technician";
+        }
+
+        if (!destination) {
+          destination = signedInUser?.role === "SUPERVISOR" ? "/supervisor" : "/technician";
+        }
+
         window.location.href = destination;
         return;
       }
@@ -70,7 +79,7 @@ export function LoginForm() {
         return;
       }
 
-      const result = await signUp({
+      await signUp({
         email: parsed.data.email,
         password: parsed.data.password,
         fullName: parsed.data.fullName,
@@ -78,15 +87,34 @@ export function LoginForm() {
         role: parsed.data.role,
       });
 
-      if (result.requiresEmailConfirmation) {
+      try {
+        // Automatically sign in the user after successful signup
+        const { user: signedInUser } = await signIn({
+          email: parsed.data.email,
+          password: parsed.data.password,
+        });
+
+        let destination = redirectTo && redirectTo !== "/dashboard" ? redirectTo : "";
+
+        // Role-based destination enforcement to prevent 403 Forbidden redirects
+        if (signedInUser?.role === "SUPERVISOR" && destination.includes("/technician")) {
+          destination = "/supervisor";
+        } else if (signedInUser?.role === "TECHNICIAN" && destination.includes("/supervisor")) {
+          destination = "/technician";
+        }
+
+        if (!destination) {
+          destination = signedInUser?.role === "SUPERVISOR" ? "/supervisor" : "/technician";
+        }
+
+        window.location.href = destination;
+      } catch (loginErr) {
+        // Fallback if automatic login fails: show success message and switch to sign-in mode
         setSuccessMessage(
-          "Account created. Check your email to confirm your address before signing in.",
+          "Account created successfully! Please sign in with your email and password.",
         );
         setMode("sign-in");
-        return;
       }
-
-      router.replace(redirectTo);
     } catch {
       // AuthContext already stores the error message.
     }

@@ -34,6 +34,10 @@ export const voiceQuerySchema = z.object({
     .array(z.string().min(1).max(100))
     .max(20, "At most 20 tools can be attached")
     .optional(),
+  agentResponse: z
+    .string()
+    .max(8000, "Agent response must be at most 8000 characters")
+    .optional(),
 });
 
 export const createInspectionSchema = z.object({

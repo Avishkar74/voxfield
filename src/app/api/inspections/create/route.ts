@@ -2,7 +2,7 @@ import { withApiHandler } from "@/lib/api/handler";
 import { parseJsonBody } from "@/lib/api/request";
 import { apiSuccess } from "@/lib/api/response";
 import { createClient } from "@/lib/supabase/server";
-import { createInspection } from "@/services/phase2.service";
+import { createInspection } from "@/services/operations.service";
 
 export const POST = withApiHandler(
   async (request, { user }) => {

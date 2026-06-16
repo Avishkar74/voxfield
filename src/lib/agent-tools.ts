@@ -6,7 +6,7 @@ import {
   createInspection,
   createWorkOrder,
   updateWorkOrder,
-} from "@/services/phase2.service";
+} from "@/services/operations.service";
 
 // ---------------------------------------------------------------------------
 // Standard response envelope
@@ -30,6 +30,39 @@ function fail(error: string): string {
 // Internal entity resolvers
 // ---------------------------------------------------------------------------
 
+function cleanEquipmentCode(code: string): string {
+  return code
+    .toUpperCase()
+    .replace(/\b(?:DASH|HYPHEN|SLASH|UNDERSCORE)\b/g, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function getLevenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          Math.min(
+            matrix[i][j - 1] + 1, // insertion
+            matrix[i - 1][j] + 1 // deletion
+          )
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
 /** Resolve equipment identifier (code or partial name) → { id, code, name, location, status } */
 async function resolveEquipment(
   supabase: SupabaseClient<Database>,
@@ -43,6 +76,38 @@ async function resolveEquipment(
     .maybeSingle();
 
   if (exactResult.data) return exactResult.data;
+
+  // Fetch all equipment to perform speech-friendly normalization & fuzzy matching
+  const allEquipmentResult = await (supabase as any)
+    .from("equipment")
+    .select("id, equipment_code, name, location, status");
+
+  if (allEquipmentResult.data && allEquipmentResult.data.length > 0) {
+    const cleanedIdentifier = cleanEquipmentCode(identifier);
+    
+    // 1. Try exact match on cleaned identifiers
+    const exactCleanedMatch = allEquipmentResult.data.find(
+      (eq: any) => cleanEquipmentCode(eq.equipment_code) === cleanedIdentifier
+    );
+    if (exactCleanedMatch) return exactCleanedMatch;
+
+    // 2. Try fuzzy matching using Levenshtein distance on cleaned identifiers
+    let bestMatch = null;
+    let minDistance = Infinity;
+
+    for (const eq of allEquipmentResult.data) {
+      const cleanedCode = cleanEquipmentCode(eq.equipment_code);
+      const distance = getLevenshteinDistance(cleanedIdentifier, cleanedCode);
+      
+      // We want to make sure the match is reasonably close (distance <= 2)
+      if (distance < minDistance && distance <= 2) {
+        minDistance = distance;
+        bestMatch = eq;
+      }
+    }
+
+    if (bestMatch) return bestMatch;
+  }
 
   // Fall back to partial name search
   const nameResult = await (supabase as any)
