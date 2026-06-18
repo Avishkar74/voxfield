@@ -85,18 +85,19 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const navLinks: NavLink[] = isTechnician
     ? [
         { name: "Dashboard", href: "/technician", icon: LayoutDashboard },
-        { name: "Work Orders", href: "/technician#work-orders", icon: Wrench },
-        { name: "Inspections", href: "/technician#inspections", icon: ClipboardCheck },
-        { name: "Activity", href: "/technician#activity", icon: History },
-        { name: "Voice History", href: "/technician#voice-history", icon: MessageSquare },
+        { name: "Work Orders", href: "/technician/work-orders", icon: Wrench },
+        { name: "Inspections", href: "/technician/inspections", icon: ClipboardCheck },
+        { name: "Activity", href: "/technician/activity", icon: History },
+        { name: "Voice History", href: "/technician/voice-history", icon: MessageSquare },
       ]
     : [
         { name: "Dashboard", href: "/supervisor", icon: LayoutDashboard },
-        { name: "Work Orders", href: "/supervisor#work-orders", icon: Wrench },
-        { name: "Inspections", href: "/supervisor#inspections", icon: ClipboardCheck },
+        { name: "Work Orders", href: "/supervisor/work-orders", icon: Wrench },
+        { name: "Inspections", href: "/supervisor/inspections", icon: ClipboardCheck },
         { name: "Alerts", href: "/supervisor#alerts", icon: ShieldAlert },
-        { name: "Activity", href: "/supervisor#activity", icon: History },
-        { name: "Operations Log", href: "/supervisor/operations", icon: FileBarChart2 },
+        { name: "Voice History", href: "/supervisor/voice-history", icon: MessageSquare },
+        { name: "Reports", href: "/supervisor/reports", icon: FileBarChart2 },
+        { name: "Operations Log", href: "/supervisor/operations", icon: History },
       ];
 
   const handleSignOut = async () => {
@@ -311,8 +312,8 @@ export function AppLayout({ children, user }: AppLayoutProps) {
           </div>
         </div>
 
-        {/* Content */}
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+        {/* Content — extra bottom padding on mobile so the fixed bottom nav doesn't overlap content */}
+        <main className="flex-1 p-4 sm:p-5 md:p-8 pb-24 md:pb-8 overflow-x-hidden">
           {children}
         </main>
       </div>
@@ -320,7 +321,12 @@ export function AppLayout({ children, user }: AppLayoutProps) {
       {/* Mobile bottom navigation */}
       <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-2 px-4 z-20 shadow-lg">
         {navLinks
-          .filter((l) => ["Dashboard", "Work Orders", "Inspections", "Voice History"].includes(l.name))
+          .filter((l) =>
+            (isTechnician
+              ? ["Dashboard", "Work Orders", "Inspections", "Voice History"]
+              : ["Dashboard", "Work Orders", "Inspections", "Alerts"]
+            ).includes(l.name),
+          )
           .map((link) => {
             const Icon = link.icon;
             const active = isLinkActive(link);

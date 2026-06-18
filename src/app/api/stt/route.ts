@@ -3,9 +3,13 @@ import { AssemblyAI } from "assemblyai";
 import { requireAuth } from "@/lib/api/middleware";
 import { createClient } from "@/lib/supabase/server";
 
-const aai = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY!,
-});
+let aaiClient: AssemblyAI | null = null;
+function getAssemblyAI(): AssemblyAI {
+  if (!aaiClient) {
+    aaiClient = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY ?? "" });
+  }
+  return aaiClient;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +44,7 @@ export async function POST(req: NextRequest) {
       console.warn("STT: Failed to fetch equipment codes for word_boost, using static list:", dbError);
     }
 
-    const transcript = await aai.transcripts.transcribe({
+    const transcript = await getAssemblyAI().transcripts.transcribe({
       audio: buffer,
       language_code: "en",
       word_boost: wordBoost,
