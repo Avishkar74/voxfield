@@ -2,6 +2,8 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+
 
 export type AgentState = "IDLE" | "LISTENING" | "TRANSCRIBING" | "THINKING" | "PROCESSING" | "SPEAKING" | "ERROR";
 
@@ -17,6 +19,7 @@ export function useVoiceAgent() {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const ttsSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   /** Ensure AudioContext is created and resumed (must be called from a user gesture) */
   const ensureAudioContext = async (): Promise<AudioContext> => {
@@ -37,6 +40,7 @@ export function useVoiceAgent() {
     const source = ctx.createBufferSource();
     source.buffer = decoded;
     source.connect(ctx.destination);
+    ttsSourceRef.current = source;
     setAgentState("SPEAKING");
     return new Promise((resolve) => {
       source.onended = () => {
@@ -47,7 +51,24 @@ export function useVoiceAgent() {
     });
   };
 
+  const stopSpeaking = useCallback(() => {
+    if(ttsSourceRef.current){
+      try {
+        ttsSourceRef.current.stop()
+      } catch (error) {
+        
+      }
+      ttsSourceRef.current = null;
+    }
+    setAgentState("IDLE")
+
+  },[])
+
+  const isBusy = useCallback(()=> agentState !== "IDLE" && agentState !== "ERROR", [agentState])
+
   const startListening = useCallback(async () => {
+
+    if(isBusy()) return;
     try {
       setError(null);
       setTranscript("");
@@ -94,11 +115,13 @@ export function useVoiceAgent() {
       mediaRecorder.start();
       setAgentState("LISTENING");
     } catch (err: any) {
-      setError(err.message || "Microphone access denied");
+      const msg = err.message || "Microphone access denied";
+      setError(msg);
       setAgentState("ERROR");
+      showErrorToast(msg);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isBusy]);
 
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && agentState === "LISTENING") {
@@ -106,6 +129,11 @@ export function useVoiceAgent() {
       setAgentState("TRANSCRIBING");
     }
   }, [agentState]);
+
+  const showErrorToast = (message:string) => {
+    console.log("[VoiceAgent Error]",message);
+    toast.error(message);
+  }
 
   const queueOfflineVoice = useCallback(async (audioBlob: Blob) => {
     try {
@@ -185,7 +213,13 @@ export function useVoiceAgent() {
         return;
       }
 
-      if (!sttRes.ok) throw new Error("Transcription failed");
+      if(!sttRes.ok){
+        const msg = `Transcription failed (${sttRes.status})`;
+        setError(msg)
+        setAgentState("ERROR");
+        showErrorToast(msg);
+        return;
+      }
       const sttData = await sttRes.json();
 
       const text = sttData.text;
@@ -207,7 +241,6 @@ export function useVoiceAgent() {
         await queueOfflineText(text);
         return;
       }
-
       setAgentState("THINKING");
 
       // 2. Query Agent
@@ -224,7 +257,13 @@ export function useVoiceAgent() {
         return;
       }
 
-      if (!queryRes.ok) throw new Error("Agent processing failed");
+      if (!queryRes.ok) {
+        const msg = `Agent processing failed (${queryRes.status})`;
+        setError(msg);
+        setAgentState("ERROR");
+        showErrorToast(msg);
+        return;
+      }
       const queryData = await queryRes.json();
       
       if (queryData?.data?.sessionId) {
@@ -244,7 +283,12 @@ export function useVoiceAgent() {
         body: JSON.stringify({ text: reply }),
       });
 
-      if (!ttsRes.ok) throw new Error("Text-to-speech failed");
+      if (!ttsRes.ok) {
+        const msg = `Text-to-speech failed (${ttsRes.status})`;
+        showErrorToast(msg);
+        setAgentState("IDLE");
+        return;
+      }
       const arrayBuffer = await ttsRes.arrayBuffer();
       await playAudioBuffer(arrayBuffer);
     } catch (err: any) {
@@ -254,13 +298,14 @@ export function useVoiceAgent() {
   };
 
   const submitTextQuery = useCallback(async (text: string) => {
+    if(isBusy()) return;
     try {
       setError(null);
       setTranscript(text);
       setAgentResponse("");
       setAgentState("THINKING");
 
-      // Ensure AudioContext is running — we ARE in a user gesture here
+      
       await ensureAudioContext();
 
       if (typeof window !== "undefined" && !navigator.onLine) {
@@ -282,7 +327,13 @@ export function useVoiceAgent() {
         return;
       }
 
-      if (!queryRes.ok) throw new Error("Agent processing failed");
+      if (!queryRes.ok) {
+        const msg = `Agent processing failed (${queryRes.status})`;
+        setError(msg);
+        setAgentState("ERROR");
+        showErrorToast(msg);
+        return;
+      }
       const queryData = await queryRes.json();
       
       if (queryData?.data?.sessionId) {
@@ -302,7 +353,11 @@ export function useVoiceAgent() {
         body: JSON.stringify({ text: reply }),
       });
 
-      if (!ttsRes.ok) throw new Error("Text-to-speech failed");
+      if (!ttsRes.ok) {
+        showErrorToast(`Text-to-speech failed (${ttsRes.status})`);
+        setAgentState("IDLE");
+        return;
+      }
       const arrayBuffer = await ttsRes.arrayBuffer();
       await playAudioBuffer(arrayBuffer);
     } catch (err: any) {
@@ -321,8 +376,10 @@ export function useVoiceAgent() {
     transcript,
     agentResponse,
     error,
+    isBusy,
     startListening,
     stopListening,
+    stopSpeaking,
     submitTextQuery,
     getAnalyser,
   };
