@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-export type AgentState = "IDLE" | "LISTENING" | "PROCESSING" | "SPEAKING" | "ERROR";
+export type AgentState = "IDLE" | "LISTENING" | "TRANSCRIBING" | "THINKING" | "PROCESSING" | "SPEAKING" | "ERROR";
 
 export function useVoiceAgent() {
   const router = useRouter();
@@ -103,7 +103,7 @@ export function useVoiceAgent() {
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && agentState === "LISTENING") {
       mediaRecorderRef.current.stop();
-      setAgentState("PROCESSING");
+      setAgentState("TRANSCRIBING");
     }
   }, [agentState]);
 
@@ -208,6 +208,8 @@ export function useVoiceAgent() {
         return;
       }
 
+      setAgentState("THINKING");
+
       // 2. Query Agent
       let queryRes;
       try {
@@ -256,7 +258,7 @@ export function useVoiceAgent() {
       setError(null);
       setTranscript(text);
       setAgentResponse("");
-      setAgentState("PROCESSING");
+      setAgentState("THINKING");
 
       // Ensure AudioContext is running — we ARE in a user gesture here
       await ensureAudioContext();
