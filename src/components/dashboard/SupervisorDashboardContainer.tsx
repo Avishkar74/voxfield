@@ -35,6 +35,7 @@ import type {
 import { createClient } from "@/lib/supabase/client";
 import { OfflineSyncSection } from "./OfflineSyncSection";
 import { FormattedDate } from "./FormattedDate";
+import { AlertCircle } from "lucide-react";
 
 interface SupervisorDashboardContainerProps {
   initialData: {
@@ -79,6 +80,7 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
   const [lastUpdatedTime, setLastUpdatedTime] = useState<Date>(new Date());
   const [timeAgoText, setTimeAgoText] = useState("Just now");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,10 +121,16 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
           setData(result.data);
           setLastUpdatedTime(new Date());
           setTimeAgoText("Just now");
+          setDashboardError(null);
+        } else {
+          setDashboardError(result.error || "Failed to refresh dashboard data");
         }
+      } else {
+        setDashboardError("Failed to refresh dashboard data");
       }
     } catch (err) {
       console.error("Failed to refresh dashboard data", err);
+      setDashboardError("Failed to refresh dashboard data. Check your connection.");
     } finally {
       setIsRefreshing(false);
     }
@@ -147,8 +155,10 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
         ...prev,
         alerts: prev.alerts.map(a => (a.id === alertId ? { ...a, status: "ACKNOWLEDGED", acknowledged_by: data.user.id } : a))
       }));
-    } catch (err) {
+      setDashboardError(null);
+    } catch (err: any) {
       console.error("Failed to acknowledge alert", err);
+      setDashboardError(err.message || "Failed to acknowledge alert");
     }
   };
 
@@ -388,6 +398,22 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
           </div>
         </div>
       </header>
+
+      {dashboardError && (
+        <div className="flex items-start justify-between gap-2 bg-red-50 border border-red-100 p-3.5 rounded-2xl text-red-600 text-xs leading-relaxed">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="w-4.5 h-4.5 mt-0.5 flex-shrink-0" />
+            <span>{dashboardError}</span>
+          </div>
+          <button
+            onClick={() => setDashboardError(null)}
+            className="text-red-400 hover:text-red-600 transition flex-shrink-0"
+            aria-label="Dismiss error"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* 2. Operations Summary Cards (Top Row) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-5">
