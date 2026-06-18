@@ -41,6 +41,7 @@ interface NavLink {
 
 export function AppLayout({ children, user }: AppLayoutProps) {
   const pathname = usePathname();
+  const [currentHash, setCurrentHash] = useState("");
   const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useAuth();
 
@@ -48,11 +49,28 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   // Mobile drawer open/closed
   const [drawerOpen, setDrawerOpen] = useState(false);
-
   // Close drawer on route change
   useEffect(() => {
-    setDrawerOpen(false);
+  setDrawerOpen(false);
   }, [pathname]);
+
+// Track current URL hash (#work-orders, #alerts, etc.)
+useEffect(() => {
+  const updateHash = () => {
+    setCurrentHash(window.location.hash);
+  };
+
+  // Initial value
+  updateHash();
+
+  // Listen for hash changes
+  window.addEventListener("hashchange", updateHash);
+
+  return () => {
+    window.removeEventListener("hashchange", updateHash);
+  };
+}, []);
+
 
   // Automatically refresh dashboard data when background offline sync completes
   useEffect(() => {
@@ -108,13 +126,29 @@ export function AppLayout({ children, user }: AppLayoutProps) {
     }
   };
 
-  const isLinkActive = (link: NavLink) => {
-    if (link.href.includes("#")) {
-      const parts = link.href.split("#");
-      return pathname === parts[0];
-    }
-    return pathname === link.href;
-  };
+const isLinkActive = (link: NavLink) => {
+  // Dashboard
+  if (link.name === "Dashboard") {
+    const dashboardRoute = isTechnician
+      ? "/technician"
+      : "/supervisor";
+
+    return pathname === dashboardRoute && currentHash === "";
+  }
+
+  // Hash-based sections
+  if (link.href.includes("#")) {
+    const [route, section] = link.href.split("#");
+
+    return (
+      pathname === route &&
+      currentHash === `#${section}`
+    );
+  }
+
+  // Normal pages like Operations Log
+  return pathname === link.href;
+};
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex flex-col h-full">
@@ -137,7 +171,15 @@ export function AppLayout({ children, user }: AppLayoutProps) {
             <Link
               key={link.name}
               href={link.href}
-              onClick={() => mobile && setDrawerOpen(false)}
+              onClick={() => {
+  const hash = link.href.includes("#")
+    ? `#${link.href.split("#")[1]}`
+    : "";
+
+  setCurrentHash(hash);
+
+  if (mobile) setDrawerOpen(false);
+}}
               title={collapsed && !mobile ? link.name : undefined}
               className={`flex items-center rounded-xl transition-all duration-200 group ${
                 collapsed && !mobile
