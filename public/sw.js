@@ -1,10 +1,22 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js");
 
 // CACHE VERSION - bump this to force SW update and clear old caches
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 
-// Force immediate activation — don't wait for existing tabs to close
+// App-shell assets to precache so the app can boot fully offline
+const OFFLINE_URL = "/offline.html";
+const PRECACHE_NAME = `precache-${CACHE_VERSION}`;
+const PRECACHE_URLS = [OFFLINE_URL, "/manifest.json"];
+
+// Force immediate activation — don't wait for existing tabs to close,
+// and precache the offline fallback shell.
 self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(PRECACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .catch(() => {})
+  );
   self.skipWaiting();
 });
 
@@ -83,12 +95,24 @@ if (self.workbox) {
     })
   );
 
-  // ─── Navigation → NetworkFirst
+  // ─── Navigation → NetworkFirst, with offline.html fallback when both
+  // the network and the page cache miss (true offline, page never visited).
+  const navigationHandler = new self.workbox.strategies.NetworkFirst({
+    cacheName: `pages-${CACHE_VERSION}`,
+    networkTimeoutSeconds: 5,
+  });
   self.workbox.routing.registerRoute(
     ({ request }) => request.mode === "navigate",
-    new self.workbox.strategies.NetworkFirst({
-      cacheName: `pages-${CACHE_VERSION}`,
-    })
+    async (args) => {
+      try {
+        const response = await navigationHandler.handle(args);
+        if (response) return response;
+      } catch (err) {
+        // fall through to offline shell
+      }
+      const cache = await caches.open(PRECACHE_NAME);
+      return (await cache.match(OFFLINE_URL)) || Response.error();
+    }
   );
 
   // ─── Background Sync Event
