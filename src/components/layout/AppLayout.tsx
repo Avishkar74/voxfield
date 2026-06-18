@@ -202,16 +202,6 @@ const isLinkActive = (link: NavLink) => {
 
       {/* Footer */}
       <div className={`border-t border-[#2B2824] p-3 space-y-3`}>
-        {/* System status */}
-        {(!collapsed || mobile) && (
-          <div className="bg-[#262421] border border-[#2E2B27] rounded-xl p-3 space-y-1">
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-bold text-white uppercase tracking-wider">System Online</span>
-            </div>
-            <p className="text-[10px] text-[#A3A3A3]">All systems operational</p>
-          </div>
-        )}
 
         {/* User info */}
         <div className={`flex items-center ${collapsed && !mobile ? "justify-center" : "space-x-3"}`}>
