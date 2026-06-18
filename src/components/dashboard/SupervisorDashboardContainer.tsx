@@ -544,7 +544,10 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
       </section>
 
       {/* 3. Critical Alerts Section (Most Important Section) */}
-      <section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+      <section
+        id="alerts"
+        className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden"
+      >
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-600" />
@@ -693,7 +696,10 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* 5. Recent Activity Feed */}
-        <section className="lg:col-span-5 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[480px]">
+        <section
+          id="activity"
+          className="lg:col-span-5 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[480px]"
+        >
           <div className="p-5 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
               <Activity className="w-5 h-5 text-indigo-500" />
@@ -811,7 +817,10 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
       </div>
 
       {/* 7. Work Orders Management Table */}
-      <section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+      <section
+       id="work-orders"
+       className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden"
+      >
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
             <Wrench className="w-5 h-5 text-blue-500" />
