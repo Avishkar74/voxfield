@@ -6,26 +6,23 @@ VoxField exposes a collection of Next.js API Routes that act as the communicatio
 
 The API layer follows a consistent pattern:
 
-```text
-Client Request
-      │
-      ▼
-API Route
-      │
-      ▼
-Authentication
-      │
-      ▼
-Validation
-      │
-      ▼
-Service Layer / Agent
-      │
-      ▼
-Supabase Database
-      │
-      ▼
-Response
+
+```mermaid
+flowchart TD
+    A[Client Request]
+    B[API Route]
+    C[Authentication]
+    D[Validation]
+    E[Service Layer / Agent]
+    F[(Supabase Database)]
+    G[Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
 ```
 
 Most routes use the shared API infrastructure:
@@ -42,23 +39,26 @@ This ensures consistent authentication, error handling, and response formatting.
 
 # API Architecture
 
-```text
-Frontend
-   │
-   ▼
-Next.js API Routes
-   │
-   ├── Voice APIs
-   ├── Inspection APIs
-   ├── Work Order APIs
-   ├── Dashboard APIs
-   └── Sync APIs
-   │
-   ▼
-Service Layer / Agent Layer
-   │
-   ▼
-Supabase PostgreSQL
+```mermaid
+flowchart TD
+    A[Frontend]
+    B[Next.js API Routes]
+    C[Voice APIs]
+    D[Inspection APIs]
+    E[Work Order APIs]
+    F[Dashboard APIs]
+    G[Sync APIs]
+    H[Service Layer / Agent Layer]
+    I[(Supabase PostgreSQL)]
+
+    A --> B
+    B --> C
+    B --> D
+    B --> E
+    B --> F
+    B --> G
+    B --> H
+    H --> I
 ```
 
 ---
@@ -85,41 +85,32 @@ Required
 
 ## Flow
 
-```text
-User Voice
-      │
-      ▼
-Speech-to-Text
-      │
-      ▼
-Voice Transcript
-      │
-      ▼
-POST /api/voice-query
-      │
-      ▼
-processVoiceQuery()
-      │
-      ▼
-Load Conversation Context
-      │
-      ▼
-GPT-4o Agent
-      │
-      ▼
-Tool Execution
-      │
-      ▼
-Database Operations
-      │
-      ▼
-Agent Response
-      │
-      ▼
-Transcript Storage
-      │
-      ▼
-Response Returned
+```mermaid
+flowchart TD
+    A[User Voice]
+    B[Speech-to-Text]
+    C[Voice Transcript]
+    D["POST /api/voice-query"]
+    E["processVoiceQuery()"]
+    F[Load Conversation Context]
+    G[GPT-4o Agent]
+    H[Tool Execution]
+    I[(Database Operations)]
+    J[Agent Response]
+    K[Transcript Storage]
+    L[Response Returned]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
 ```
 
 ---
@@ -187,38 +178,30 @@ TECHNICIAN only
 
 ## Flow
 
-```text
-Technician
-     │
-     ▼
-Inspection Form
-     │
-     ▼
-POST /api/inspections/create
-     │
-     ▼
-Authentication Check
-     │
-     ▼
-Parse Request Body
-     │
-     ▼
-createInspection()
-     │
-     ▼
-Validation
-     │
-     ▼
-Insert Inspection Report
-     │
-     ▼
-Generate Alert (if required)
-     │
-     ▼
-Create Activity Log
-     │
-     ▼
-Response
+```mermaid
+flowchart TD
+    A[Technician]
+    B[Inspection Form]
+    C["POST /api/inspections/create"]
+    D[Authentication Check]
+    E[Parse Request Body]
+    F["createInspection()"]
+    G[Validation]
+    H[Insert Inspection Report]
+    I[Generate Alert if Required]
+    J[Create Activity Log]
+    K[Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
 ```
 
 ---
@@ -234,17 +217,17 @@ The inspection service may:
 * Create activity history
 
 Example outcomes:
+```mermaid
+flowchart TD
+    A[Inspection Submitted]
 
-```text
-LOW severity
-     ↓
-Inspection only
+    A --> B[LOW Severity]
+    A --> C[CRITICAL Severity]
 
-CRITICAL severity
-     ↓
-Inspection
-     ↓
-Alert Creation
+    B --> D[Inspection Only]
+
+    C --> E[Inspection Created]
+    E --> F[Alert Creation]
 ```
 
 ---
@@ -277,52 +260,44 @@ TECHNICIAN only
 
 ## Flow
 
-```text
-Technician
-     │
-     ▼
-Create Work Order
-     │
-     ▼
-POST /api/work-orders/create
-     │
-     ▼
-Authentication Check
-     │
-     ▼
-Parse Request Body
-     │
-     ▼
-createWorkOrder()
-     │
-     ▼
-Validation
-     │
-     ▼
-Database Insert
-     │
-     ▼
-Assignment Logic
-     │
-     ▼
-Activity Log
-     │
-     ▼
-Response
+```mermaid
+flowchart TD
+    A[Technician]
+    B[Create Work Order]
+    C["POST /api/work-orders/create"]
+    D[Authentication Check]
+    E[Parse Request Body]
+    F["createWorkOrder()"]
+    G[Validation]
+    H[Database Insert]
+    I[Assignment Logic]
+    J[Activity Log]
+    K[Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
 ```
 
 ---
 
 ## Work Order Lifecycle
 
-```text
-OPEN
-  │
-  ▼
-IN_PROGRESS
-  │
-  ▼
-CLOSED
+```mermaid
+flowchart TD
+    A[OPEN]
+    B[IN_PROGRESS]
+    C[CLOSED]
+
+    A --> B
+    B --> C
 ```
 
 ---
@@ -339,26 +314,22 @@ GET /api/dashboard/technician
 
 Flow:
 
-```text
-Dashboard Load
-      │
-      ▼
-API Request
-      │
-      ▼
-Authentication
-      │
-      ▼
-getTechnicianDashboard()
-      │
-      ▼
-Supabase Queries
-      │
-      ▼
-Aggregated Data
-      │
-      ▼
-Dashboard Response
+```mermaid
+flowchart TD
+    A[Dashboard Load]
+    B[API Request]
+    C[Authentication]
+    D["getTechnicianDashboard()"]
+    E[Supabase Queries]
+    F[Aggregated Data]
+    G[Dashboard Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
 ```
 
 Returned data includes:
@@ -381,26 +352,22 @@ GET /api/dashboard/supervisor
 
 Flow:
 
-```text
-Supervisor Dashboard
-        │
-        ▼
-API Request
-        │
-        ▼
-Authentication
-        │
-        ▼
-getSupervisorDashboard()
-        │
-        ▼
-Aggregate Queries
-        │
-        ▼
-KPI Calculations
-        │
-        ▼
-Response
+```mermaid
+flowchart TD
+    A[Supervisor Dashboard]
+    B[API Request]
+    C[Authentication]
+    D["getSupervisorDashboard()"]
+    E[Aggregate Queries]
+    F[KPI Calculations]
+    G[Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
 ```
 
 Returned data includes:
@@ -429,20 +396,18 @@ Retrieve maintenance history for a specific equipment asset.
 
 Flow:
 
-```text
-Equipment Selection
-        │
-        ▼
-Equipment API
-        │
-        ▼
-Repair History Query
-        │
-        ▼
-Equipment Records
-        │
-        ▼
-Response
+```mermaid
+flowchart TD
+    A[Equipment Selection]
+    B[Equipment API]
+    C[Repair History Query]
+    D[Equipment Records]
+    E[Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
 ```
 
 Returned data:
@@ -468,20 +433,18 @@ Convert recorded speech into text.
 
 Flow:
 
-```text
-Audio Recording
-       │
-       ▼
-Upload Audio
-       │
-       ▼
-AssemblyAI
-       │
-       ▼
-Transcript
-       │
-       ▼
-Response
+```mermaid
+flowchart TD
+    A[Audio Recording]
+    B[Upload Audio]
+    C[AssemblyAI]
+    D[Transcript]
+    E[Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
 ```
 
 Output:
@@ -508,17 +471,16 @@ Convert AI-generated text responses into audio.
 
 Flow:
 
-```text
-Agent Response
-      │
-      ▼
-POST /api/tts
-      │
-      ▼
-OpenAI TTS
-      │
-      ▼
-Audio Output
+```mermaid
+flowchart TD
+    A[Agent Response]
+    B["POST /api/tts"]
+    C[OpenAI TTS]
+    D[Audio Output]
+
+    A --> B
+    B --> C
+    C --> D
 ```
 
 Output:
@@ -543,26 +505,22 @@ Synchronize offline actions after connectivity is restored.
 
 Flow:
 
-```text
-Offline Action
-      │
-      ▼
-IndexedDB Queue
-      │
-      ▼
-Connectivity Restored
-      │
-      ▼
-syncOfflineQueue()
-      │
-      ▼
-POST /api/sync-offline-queue
-      │
-      ▼
-Database Operations
-      │
-      ▼
-Queue Updated
+```mermaid
+flowchart TD
+    A[Offline Action]
+    B[IndexedDB Queue]
+    C[Connectivity Restored]
+    D["syncOfflineQueue()"]
+    E["POST /api/sync-offline-queue"]
+    F[(Database Operations)]
+    G[Queue Updated]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
 ```
 
 ---
@@ -590,17 +548,16 @@ roles: ["SUPERVISOR"]
 
 Flow:
 
-```text
-Incoming Request
-       │
-       ▼
-JWT Validation
-       │
-       ▼
-Role Verification
-       │
-       ▼
-Route Execution
+```mermaid
+flowchart TD
+    A[Incoming Request]
+    B[JWT Validation]
+    C[Role Verification]
+    D[Route Execution]
+
+    A --> B
+    B --> C
+    C --> D
 ```
 
 Unauthorized users receive an authentication error before business logic executes.
@@ -611,23 +568,20 @@ Unauthorized users receive an authentication error before business logic execute
 
 Most routes follow this structure:
 
-```text
-Request
-   │
-   ▼
-withApiHandler()
-   │
-   ▼
-parseJsonBody()
-   │
-   ▼
-Service Function
-   │
-   ▼
-Supabase
-   │
-   ▼
-apiSuccess()
+```mermaid
+flowchart TD
+    A[Request]
+    B["withApiHandler()"]
+    C["parseJsonBody()"]
+    D[Service Function]
+    E[(Supabase)]
+    F["apiSuccess()"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
 ```
 
 Benefits:

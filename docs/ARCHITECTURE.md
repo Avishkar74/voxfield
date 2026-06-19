@@ -8,70 +8,40 @@ The application enables users to interact with equipment records, inspections, w
 
 The system follows a layered architecture:
 
-```
-User
- ↓
-Next.js Frontend
- ↓
-API Routes
- ↓
-Service Layer
- ↓
-Supabase
- ↓
-PostgreSQL
+```mermaid
+flowchart TD
+    A[User] --> B[Next.js Frontend]
+    B --> C[API Routes]
+    C --> D[Service Layer]
+    D --> E[Supabase]
+    E --> F[PostgreSQL]
 ```
 
 ---
 
 ## High-Level System Architecture
 
-```
-Browser (PWA)
-      │
-      ▼
-Next.js 16 Application
-      │
- ┌────┴────┐
- │         │
- ▼         ▼
-API Routes  Dashboard UI
- │
- ▼
-Service Layer
- │
- ▼
-Supabase PostgreSQL
- │
- ▼
-Business Data
+```mermaid
+flowchart TD
+    A[Browser PWA] --> B[Next.js 16 Application]
+    B --> C[API Routes]
+    B --> D[Dashboard UI]
+    C --> E[Service Layer]
+    E --> F[Supabase PostgreSQL]
+    F --> G[Business Data]
 ```
 
 Voice interactions follow an extended flow:
 
-```
-Voice Input
-    │
-    ▼
-AssemblyAI STT
-    │
-    ▼
-AI Agent (GPT-4o)
-    │
-    ▼
-Tool Execution
-    │
-    ▼
-Supabase Database
-    │
-    ▼
-AI Response
-    │
-    ▼
-OpenAI TTS
-    │
-    ▼
-Spoken Output
+```mermaid
+flowchart TD
+    A[Voice Input] --> B[AssemblyAI STT]
+    B --> C["AI Agent (GPT-4o)"]
+    C --> D[Tool Execution]
+    D --> E[Supabase Database]
+    E --> F[AI Response]
+    F --> G[OpenAI TTS]
+    G --> H[Spoken Output]
 ```
 
 ---
@@ -231,17 +201,11 @@ Row Level Security (RLS) is used to enforce data access rules.
 
 Authentication flow:
 
-```
-User Login
-     │
-     ▼
-Supabase Auth
-     │
-     ▼
-JWT Session
-     │
-     ▼
-Protected Routes
+```mermaid
+flowchart TD
+    A[User Login] --> B[Supabase Auth]
+    B --> C[JWT Session]
+    C --> D[Protected Routes]
 ```
 
 Two user roles exist:
@@ -281,10 +245,9 @@ Audio is sent to AssemblyAI.
 
 Output:
 
-```
-Audio
- ↓
-Transcript
+```mermaid
+flowchart LR
+    A[Audio] --> B[Transcript]
 ```
 
 ### Stage 3: Agent Processing
@@ -304,10 +267,9 @@ The final response is synthesized using OpenAI TTS.
 
 Output:
 
-```
-Text
- ↓
-Audio
+```mermaid
+flowchart LR
+    A[Text] --> B[Audio]
 ```
 
 ---
@@ -345,23 +307,13 @@ Responsibilities:
 
 Flow:
 
-```
-Offline Action
-      │
-      ▼
-IndexedDB Queue
-      │
-      ▼
-Reconnect
-      │
-      ▼
-Sync Engine
-      │
-      ▼
-API
-      │
-      ▼
-Database
+```mermaid
+flowchart TD
+    A[Offline Action] --> B[IndexedDB Queue]
+    B --> C[Reconnect]
+    C --> D[Sync Engine]
+    D --> E[API]
+    E --> F[Database]
 ```
 
 ---
@@ -381,6 +333,8 @@ src/
 │   ├── voice/
 │   ├── layout/
 │   └── ui/
+│   └── auth/
+│   └── marketing/
 │
 ├── services/
 │
@@ -409,6 +363,3 @@ VoxField is built around the following principles:
 5. AI-assisted workflows
 6. Mobile-first field operations
 7. Progressive enhancement through PWA capabilities
-
-```
-```

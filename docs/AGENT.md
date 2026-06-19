@@ -18,40 +18,36 @@ The agent is designed to be:
 
 ## High-Level Flow
 
-```text
-User Speech
-     │
-     ▼
-Speech-to-Text (AssemblyAI)
-     │
-     ▼
-Voice Transcript
-     │
-     ▼
-GPT-4o Agent
-     │
-     ▼
-Tool Selection
-     │
-     ▼
-Tool Execution
-     │
-     ▼
-Database Operations
-     │
-     ▼
-Agent Response
-     │
-     ▼
-Text-to-Speech (OpenAI)
-     │
-     ▼
-Spoken Response
+
+```mermaid
+flowchart TD
+    A[User Speech]
+    B[AssemblyAI STT]
+    C[Voice Transcript]
+    D[GPT-4o Agent]
+    E[Tool Selection]
+    F[Tool Execution]
+    G[(Supabase Database)]
+    H[Agent Response]
+    I[OpenAI TTS]
+    J[Spoken Response]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
 ```
+
 
 ---
 
 ## Core Components
+
 
 ### agent.ts
 
@@ -113,6 +109,21 @@ Responsibilities:
 * Retrieves KPIs
 
 The model never directly accesses the database. All actions are performed through tools.
+
+### Component Interaction
+```mermaid
+flowchart LR
+    Prompt[agent-prompt.ts]
+    Agent[agent.ts]
+    Tools[agent-tools.ts]
+    DB[(Supabase)]
+
+    Prompt --> Agent
+    Agent --> Tools
+    Tools --> DB
+    DB --> Tools
+    Tools --> Agent
+```
 
 ---
 
@@ -195,18 +206,11 @@ GPT-4o determines whether a tool is required.
 
 Examples:
 
-```text
-Equipment lookup
-↓
-searchEquipment
-
-Create work order
-↓
-createWorkOrder
-
-View inspections
-↓
-listInspections
+```mermaid
+flowchart TD
+    A[Equipment Lookup] --> B[searchEquipment]
+    C[Create Work Order] --> D[createWorkOrder]
+    E[View Inspections] --> F[listInspections]
 ```
 
 The agent follows a strict priority order:
@@ -223,16 +227,16 @@ Direct SQL access is considered a last resort.
 
 If GPT requests a tool:
 
-```text
-GPT
- ↓
-Tool Call
- ↓
-agent-tools.ts
- ↓
-Supabase
- ↓
-Result
+```mermaid
+sequenceDiagram
+    participant GPT as GPT-4o
+    participant Tools as agent-tools.ts
+    participant DB as Supabase
+
+    GPT->>Tools: Tool Call
+    Tools->>DB: Query / Mutation
+    DB-->>Tools: Result
+    Tools-->>GPT: Tool Response
 ```
 
 Tool responses are returned back into the model conversation.
@@ -251,23 +255,17 @@ The agent supports chained operations.
 
 Example:
 
-```text
-Create an inspection and generate a work order.
-```
 
-Execution:
+```mermaid
+flowchart TD
+    A[Create Inspection]
+    B[Inspection Result]
+    C[Create Work Order]
+    D[Generate Summary]
 
-```text
-Create Inspection
-      │
-      ▼
-Inspection Result
-      │
-      ▼
-Create Work Order
-      │
-      ▼
-Generate Summary
+    A --> B
+    B --> C
+    C --> D
 ```
 
 The agent may execute multiple tools before producing a final response.
@@ -355,14 +353,16 @@ The agent maintains rolling session memory.
 
 For every session:
 
-```text
-Latest 20 Turns
-       │
-       ▼
-Conversation Context
-       │
-       ▼
-Current Query
+```mermaid
+flowchart TD
+    A[Latest 20 Transcript Turns]
+    B[Conversation Context]
+    C[Current User Query]
+    D[GPT-4o Agent]
+
+    A --> B
+    C --> B
+    B --> D
 ```
 
 Benefits:

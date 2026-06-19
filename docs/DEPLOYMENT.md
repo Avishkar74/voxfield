@@ -17,21 +17,14 @@ The application consists of:
 
 # Deployment Architecture
 
-```text
-Users
-   │
-   ▼
-Vercel / Next.js
-   │
-   ├── Frontend
-   ├── API Routes
-   └── AI Agent
-   │
-   ▼
-Supabase
-   │
-   ▼
-PostgreSQL
+```mermaid
+flowchart TD
+    A[Users] --> B[Vercel / Next.js]
+    B --> C[Frontend]
+    B --> D[API Routes]
+    B --> E[AI Agent]
+    B --> F[Supabase]
+    F --> G[PostgreSQL]
 ```
 
 External services:
@@ -135,10 +128,9 @@ error_logs
 
 Add all required variables.
 
-```text
-Project Settings
-    ↓
-Environment Variables
+```mermaid
+flowchart TD
+    A[Project Settings] --> B[Environment Variables]
 ```
 
 ---
@@ -183,8 +175,11 @@ Verify:
 
 Verify:
 
-```text
-Speech → STT → Agent → TTS
+```mermaid
+flowchart LR
+    A[Speech] --> B[STT]
+    B --> C[Agent]
+    C --> D[TTS]
 ```
 
 works end-to-end.

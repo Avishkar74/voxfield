@@ -17,29 +17,15 @@ The offline architecture consists of four primary components:
 
 # Offline Architecture
 
-```text
-User Action
-      │
-      ▼
-Offline Detection
-      │
-      ▼
-IndexedDB Queue
-      │
-      ▼
-Local Persistence
-      │
-      ▼
-Connectivity Restored
-      │
-      ▼
-Sync Engine
-      │
-      ▼
-API Submission
-      │
-      ▼
-Supabase Database
+```mermaid
+flowchart TD
+    A[User Action] --> B[Offline Detection]
+    B --> C[IndexedDB Queue]
+    C --> D[Local Persistence]
+    D --> E[Connectivity Restored]
+    E --> F[Sync Engine]
+    F --> G[API Submission]
+    G --> H[Supabase Database]
 ```
 
 The goal is to ensure no operational data is lost during network outages.
@@ -207,12 +193,10 @@ These endpoints require live network connectivity.
 
 Without a fallback page:
 
-```text
-Offline
- ↓
-Navigate to new page
- ↓
-Browser error page
+```mermaid
+flowchart TD
+    A[Offline] --> B[Navigate to new page]
+    B --> C[Browser error page]
 ```
 
 This creates a poor user experience.
@@ -276,14 +260,11 @@ Stores raw audio blobs.
 
 Purpose:
 
-```text
-Offline Voice Recording
-           ↓
-Store Audio Blob
-           ↓
-Reconnect
-           ↓
-Speech-to-Text Processing
+```mermaid
+flowchart TD
+    A[Offline Voice Recording] --> B[Store Audio Blob]
+    B --> C[Reconnect]
+    C --> D[Speech-to-Text Processing]
 ```
 
 ---
@@ -306,12 +287,10 @@ Stores cached application data.
 
 Purpose:
 
-```text
-Dashboard Data
-      ↓
-Local Cache
-      ↓
-Offline Access
+```mermaid
+flowchart TD
+    A[Dashboard Data] --> B[Local Cache]
+    B --> C[Offline Access]
 ```
 
 Current status:
@@ -330,10 +309,9 @@ Voice interactions are fully supported while offline.
 
 User records speech.
 
-```text
-Technician
-    ↓
-Microphone
+```mermaid
+flowchart TD
+    A[Technician] --> B[Microphone]
 ```
 
 ---
@@ -389,12 +367,10 @@ triggers synchronization.
 
 Stored audio is transcribed.
 
-```text
-Audio Blob
-      ↓
-/api/stt
-      ↓
-Transcript
+```mermaid
+flowchart TD
+    A[Audio Blob] --> B["/api/stt"]
+    B --> C[Transcript]
 ```
 
 ---
@@ -467,14 +443,11 @@ Automatically synchronize queued items without requiring user interaction.
 
 Flow:
 
-```text
-Queued Action
-      ↓
-Background Sync
-      ↓
-Sync Trigger
-      ↓
-Queue Processing
+```mermaid
+flowchart TD
+    A[Queued Action] --> B[Background Sync]
+    B --> C[Sync Trigger]
+    C --> D[Queue Processing]
 ```
 
 ---
@@ -507,12 +480,10 @@ voiceassistant-sync
 
 When Background Sync is unavailable:
 
-```text
-Reconnect
-     ↓
-online event
-     ↓
-syncOfflineQueue()
+```mermaid
+flowchart TD
+    A[Reconnect] --> B[online event]
+    B --> C["syncOfflineQueue()"]
 ```
 
 This ensures queued items still synchronize while the application is open.
@@ -523,23 +494,17 @@ This ensures queued items still synchronize while the application is open.
 
 Every queued item follows a state machine.
 
-```text
-PENDING_SYNC
-      │
-      ▼
-SYNCING
-      │
-      ▼
-SYNCED
+```mermaid
+flowchart TD
+    A[PENDING_SYNC] --> B[SYNCING]
+    B --> C[SYNCED]
 ```
 
 If synchronization fails:
 
-```text
-SYNCING
-      │
-      ▼
-FAILED
+```mermaid
+flowchart TD
+    A[SYNCING] --> B[FAILED]
 ```
 
 ---
@@ -549,11 +514,11 @@ FAILED
 The synchronization engine implements controlled retries.
 
 | Attempt | Delay                 |
-| ------- | --------------------- |
-| 1       | Immediate             |
-| 2       | 1 second              |
-| 3       | 5 seconds             |
-| 4+      | Manual retry required |
+| ------- | ---------------------- |
+| 1       | Immediate              |
+| 2       | 1 second               |
+| 3       | 5 seconds              |
+| 4+      | Manual retry required  |
 
 This prevents excessive server requests during unstable connectivity.
 
@@ -565,12 +530,12 @@ The synchronization process enriches submissions with offline context.
 
 Stored metadata includes:
 
-| Field         | Description                           |
-| ------------- | ------------------------------------- |
-| isOffline     | Whether the action originated offline |
-| capturedAt    | Original capture time                 |
-| syncedAt      | Synchronization completion time       |
-| queueDuration | Time spent waiting in queue           |
+| Field         | Description                            |
+| ------------- | ---------------------------------------- |
+| isOffline     | Whether the action originated offline   |
+| capturedAt    | Original capture time                   |
+| syncedAt      | Synchronization completion time         |
+| queueDuration | Time spent waiting in queue             |
 
 This information is persisted in transcript records.
 
@@ -590,14 +555,11 @@ The caching infrastructure exists but dashboard pages do not yet restore previou
 
 Recommended improvement:
 
-```text
-cacheData()
-       ↓
-Store dashboard payload
-       ↓
-getCachedData()
-       ↓
-Hydrate UI while offline
+```mermaid
+flowchart TD
+    A["cacheData()"] --> B[Store dashboard payload]
+    B --> C["getCachedData()"]
+    C --> D[Hydrate UI while offline]
 ```
 
 ---
@@ -676,6 +638,3 @@ Planned enhancements include:
 5. Offline analytics and monitoring
 
 The current architecture provides reliable offline voice interaction and synchronization while maintaining a clear path toward a fully offline-capable operational dashboard.
-
-```
-```

@@ -184,16 +184,12 @@ Requirements:
 
 Voice pipeline:
 
-```text
-Microphone
-      ↓
-AssemblyAI STT
-      ↓
-GPT-4o Agent
-      ↓
-OpenAI TTS
-      ↓
-Audio Response
+```mermaid
+flowchart TD
+    A[Microphone] --> B[AssemblyAI STT]
+    B --> C[GPT-4o Agent]
+    C --> D[OpenAI TTS]
+    D --> E[Audio Response]
 ```
 
 ---
@@ -240,14 +236,14 @@ src/
 Important directories:
 
 | Directory  | Purpose                          |
-| ---------- | -------------------------------- |
+| ---------- | --------------------------------- |
 | app        | Pages and API routes             |
-| components | UI components                    |
-| services   | Business logic                   |
+| components | UI components                     |
+| services   | Business logic                    |
 | lib        | Agent, sync, IndexedDB, Supabase |
-| hooks      | React hooks                      |
-| context    | Global state                     |
-| types      | Database types                   |
+| hooks      | React hooks                       |
+| context    | Global state                      |
+| types      | Database types                    |
 
 ---
 
