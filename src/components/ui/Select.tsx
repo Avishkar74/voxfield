@@ -26,7 +26,7 @@ export function Select({
       </label>
       <select
         id={selectId}
-        className={`h-11 min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-100 dark:focus:ring-slate-800 ${error ? "border-red-500" : ""} ${className}`}
+        className={`h-11 min-h-11 rounded-lg border border-[#E5E1D8] bg-white px-3 text-base text-[#1A1A1A] outline-none transition focus:border-[#D14923] focus:ring-2 focus:ring-[#FAF0ED] ${error ? "border-red-500" : ""} ${className}`}
         aria-invalid={error ? true : undefined}
         {...props}
       >

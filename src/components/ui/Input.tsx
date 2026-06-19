@@ -18,13 +18,13 @@ export function Input({
     <div className="flex flex-col gap-2">
       <label
         htmlFor={inputId}
-        className="text-sm font-medium text-slate-700 dark:text-slate-200"
+        className="text-sm font-medium text-[#57534E]"
       >
         {label}
       </label>
       <input
         id={inputId}
-        className={`h-11 min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-100 dark:focus:ring-slate-800 ${error ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""} ${className}`}
+        className={`h-11 min-h-11 rounded-lg border border-[#E5E1D8] bg-white px-3 text-base text-[#131212] outline-none transition focus:border-[#D14923] focus:ring-2 focus:ring-[#FAF0ED] ${error ? "border-red-500 focus:border-red-500 focus:ring-red-100" : ""} ${className}`}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${inputId}-error` : undefined}
         {...props}
