@@ -41,6 +41,7 @@ interface NavLink {
 
 export function AppLayout({ children, user }: AppLayoutProps) {
   const pathname = usePathname();
+  const [currentHash, setCurrentHash] = useState("");
   const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useAuth();
 
@@ -48,11 +49,28 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   // Mobile drawer open/closed
   const [drawerOpen, setDrawerOpen] = useState(false);
-
   // Close drawer on route change
   useEffect(() => {
-    setDrawerOpen(false);
+  setDrawerOpen(false);
   }, [pathname]);
+
+// Track current URL hash (#work-orders, #alerts, etc.)
+useEffect(() => {
+  const updateHash = () => {
+    setCurrentHash(window.location.hash);
+  };
+
+  // Initial value
+  updateHash();
+
+  // Listen for hash changes
+  window.addEventListener("hashchange", updateHash);
+
+  return () => {
+    window.removeEventListener("hashchange", updateHash);
+  };
+}, []);
+
 
   // Automatically refresh dashboard data when background offline sync completes
   useEffect(() => {
@@ -85,18 +103,19 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   const navLinks: NavLink[] = isTechnician
     ? [
         { name: "Dashboard", href: "/technician", icon: LayoutDashboard },
-        { name: "Work Orders", href: "/technician#work-orders", icon: Wrench },
-        { name: "Inspections", href: "/technician#inspections", icon: ClipboardCheck },
-        { name: "Activity", href: "/technician#activity", icon: History },
-        { name: "Voice History", href: "/technician#voice-history", icon: MessageSquare },
+        { name: "Work Orders", href: "/technician/work-orders", icon: Wrench },
+        { name: "Inspections", href: "/technician/inspections", icon: ClipboardCheck },
+        { name: "Activity", href: "/technician/activity", icon: History },
+        { name: "Voice History", href: "/technician/voice-history", icon: MessageSquare },
       ]
     : [
         { name: "Dashboard", href: "/supervisor", icon: LayoutDashboard },
-        { name: "Work Orders", href: "/supervisor#work-orders", icon: Wrench },
-        { name: "Inspections", href: "/supervisor#inspections", icon: ClipboardCheck },
+        { name: "Work Orders", href: "/supervisor/work-orders", icon: Wrench },
+        { name: "Inspections", href: "/supervisor/inspections", icon: ClipboardCheck },
         { name: "Alerts", href: "/supervisor#alerts", icon: ShieldAlert },
-        { name: "Activity", href: "/supervisor#activity", icon: History },
-        { name: "Operations Log", href: "/supervisor/operations", icon: FileBarChart2 },
+        { name: "Voice History", href: "/supervisor/voice-history", icon: MessageSquare },
+        { name: "Reports", href: "/supervisor/reports", icon: FileBarChart2 },
+        { name: "Operations Log", href: "/supervisor/operations", icon: History },
       ];
 
   const handleSignOut = async () => {
@@ -108,13 +127,29 @@ export function AppLayout({ children, user }: AppLayoutProps) {
     }
   };
 
-  const isLinkActive = (link: NavLink) => {
-    if (link.href.includes("#")) {
-      const parts = link.href.split("#");
-      return pathname === parts[0];
-    }
-    return pathname === link.href;
-  };
+const isLinkActive = (link: NavLink) => {
+  // Dashboard
+  if (link.name === "Dashboard") {
+    const dashboardRoute = isTechnician
+      ? "/technician"
+      : "/supervisor";
+
+    return pathname === dashboardRoute && currentHash === "";
+  }
+
+  // Hash-based sections
+  if (link.href.includes("#")) {
+    const [route, section] = link.href.split("#");
+
+    return (
+      pathname === route &&
+      currentHash === `#${section}`
+    );
+  }
+
+  // Normal pages like Operations Log
+  return pathname === link.href;
+};
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="flex flex-col h-full">
@@ -137,7 +172,15 @@ export function AppLayout({ children, user }: AppLayoutProps) {
             <Link
               key={link.name}
               href={link.href}
-              onClick={() => mobile && setDrawerOpen(false)}
+              onClick={() => {
+  const hash = link.href.includes("#")
+    ? `#${link.href.split("#")[1]}`
+    : "";
+
+  setCurrentHash(hash);
+
+  if (mobile) setDrawerOpen(false);
+}}
               title={collapsed && !mobile ? link.name : undefined}
               className={`flex items-center rounded-xl transition-all duration-200 group ${
                 collapsed && !mobile
@@ -160,16 +203,6 @@ export function AppLayout({ children, user }: AppLayoutProps) {
 
       {/* Footer */}
       <div className={`border-t border-[#2B2824] p-3 space-y-3`}>
-        {/* System status */}
-        {(!collapsed || mobile) && (
-          <div className="bg-[#262421] border border-[#2E2B27] rounded-xl p-3 space-y-1">
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-bold text-white uppercase tracking-wider">System Online</span>
-            </div>
-            <p className="text-[10px] text-[#A3A3A3]">All systems operational</p>
-          </div>
-        )}
 
         {/* User info */}
         <div className={`flex items-center ${collapsed && !mobile ? "justify-center" : "space-x-3"}`}>
@@ -311,8 +344,8 @@ export function AppLayout({ children, user }: AppLayoutProps) {
           </div>
         </div>
 
-        {/* Content */}
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+        {/* Content — extra bottom padding on mobile so the fixed bottom nav doesn't overlap content */}
+        <main className="flex-1 p-4 sm:p-5 md:p-8 pb-24 md:pb-8 overflow-x-hidden">
           {children}
         </main>
       </div>
@@ -320,7 +353,12 @@ export function AppLayout({ children, user }: AppLayoutProps) {
       {/* Mobile bottom navigation */}
       <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-2 px-4 z-20 shadow-lg">
         {navLinks
-          .filter((l) => ["Dashboard", "Work Orders", "Inspections", "Voice History"].includes(l.name))
+          .filter((l) =>
+            (isTechnician
+              ? ["Dashboard", "Work Orders", "Inspections", "Voice History"]
+              : ["Dashboard", "Work Orders", "Inspections", "Alerts"]
+            ).includes(l.name),
+          )
           .map((link) => {
             const Icon = link.icon;
             const active = isLinkActive(link);

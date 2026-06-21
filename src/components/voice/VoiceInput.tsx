@@ -15,8 +15,10 @@ export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
   const {
     agentState,
     transcript,
+    interimTranscript,
     agentResponse,
     error,
+    liveCaptioning,
     startListening,
     stopListening,
     stopSpeaking,
@@ -150,21 +152,18 @@ export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
       </div>
 
       {/* State label */}
-      <div className="text-center -mt-2">
+      <div className="text-center -mt-2 flex flex-col items-center gap-2">
         {agentState === "LISTENING" ? (
           <>
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
-              </span>
-              <span className="text-xs text-red-500 font-medium">
-                Recording
-              </span>
-            </div>
             <p className="text-sm font-semibold text-red-500">
               Tap to stop recording
             </p>
+            {liveCaptioning && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-red-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                Live captions
+              </span>
+            )}
           </>
         ) : agentState === "TRANSCRIBING" ? (
           <p className="text-sm font-semibold text-gray-500">
@@ -203,6 +202,19 @@ export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
         />
       </div>
 
+      {/* Live realtime caption while listening */}
+      {agentState === "LISTENING" && liveCaptioning && (transcript || interimTranscript) && (
+        <div className="w-full bg-[#FAF9F5] border border-gray-100 rounded-2xl p-4">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+            Listening…
+          </p>
+          <p className="text-sm text-gray-800 font-medium leading-relaxed">
+            {transcript}{" "}
+            <span className="text-gray-400 italic">{interimTranscript}</span>
+          </p>
+        </div>
+      )}
+
       {/* Error and result feedback */}
       {(error || transcript || agentResponse) && (
         <div className="w-full border-t border-gray-100 pt-5 space-y-3">
@@ -216,7 +228,7 @@ export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
             </div>
           )}
 
-          {transcript && (
+          {transcript && agentState !== "LISTENING" && (
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
                 You

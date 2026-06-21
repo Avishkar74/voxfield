@@ -163,54 +163,11 @@ BEGIN
     (tech_id, 'QUERY_EQUIPMENT', 'equipment', 'e1000001-0000-0000-0000-000000000007', 'Queried repair history for HVAC-R1-01')
   ON CONFLICT DO NOTHING;
 
-  -- Step 7: Transcripts (11 voice interactions)
-  INSERT INTO public.transcripts (user_id, user_prompt, agent_response, session_id, tools_used)
-  VALUES
-    (tech_id,
-      'What was the last repair on MTR-102?',
-      'The last repair on MTR-102 was an electrical fault on September 5th, 2025. A faulty capacitor bank was replaced, correcting the power factor to 0.95. The repair took 4 hours and cost $1,100.',
-      'sess-001', ARRAY['getEquipmentHistory']),
-    (tech_id,
-      'Create an inspection for PUMP-201. Mechanical seal is leaking. Severity critical.',
-      'Critical inspection created for PUMP-201. The mechanical seal leak has been logged with CRITICAL severity. A supervisor alert has been automatically generated. Work order WO-2025-001 has been assigned to you for seal replacement.',
-      'sess-001', ARRAY['createInspection', 'createAlert']),
-    (tech_id,
-      'Show my open work orders.',
-      'You have 3 open work orders. WO-2025-001 is CRITICAL priority for PUMP-201 seal replacement and is currently in progress. WO-2025-002 is MEDIUM priority for MTR-102 belt replacement. WO-2025-003 is HIGH priority for HVAC-F3 refrigerant inspection.',
-      'sess-002', ARRAY['getTechnicianWorkOrders']),
-    (tech_id,
-      'What is the repair history of COMP-001?',
-      'COMP-001 has 2 recorded repairs. In February 2025, air filters were replaced, improving compression ratio, costing $95. In June 2025, a faulty pressure relief valve was replaced and set to 8.5 bar, costing $560.',
-      'sess-002', ARRAY['getEquipmentHistory']),
-    (tech_id,
-      'Update work order WO-2025-005 to closed.',
-      'Work order WO-2025-005 for CHI-001 post-repair monitoring has been marked as closed. The 72-hour monitoring period is complete. Activity log updated.',
-      'sess-003', ARRAY['updateWorkOrder']),
-    (tech_id,
-      'What inspections are pending on HVAC-F3?',
-      'There is 1 open inspection for HVAC-F3. Inspection ID 4 was filed today for a cooling performance drop. Supply air temperature is 4°C above setpoint with evaporator icing detected. Severity is HIGH. Work order WO-2025-003 has been raised for investigation.',
-      'sess-003', ARRAY['getEquipmentHistory']),
-    (tech_id,
-      'Create work order for HVAC refrigerant check.',
-      'Work order WO-2025-003 has been created for HVAC-F3 refrigerant charge inspection. Priority is HIGH. The work order has been assigned to you. Please check refrigerant pressures at service ports and inspect the expansion valve.',
-      'sess-004', ARRAY['createWorkOrder']),
-    (tech_id,
-      'Show repair history of GEN-B2.',
-      'GEN-B2 has 1 recorded repair. In March 2025, starting batteries on the 24V system were replaced. A load test was performed and the generator passed at 100% rated output. The repair took 2 hours and cost $680.',
-      'sess-004', ARRAY['getEquipmentHistory']),
-    (tech_id,
-      'How many work orders do I have?',
-      'You currently have 4 work orders assigned. 1 is CRITICAL priority and in progress, 2 are open, and 1 has been closed.',
-      'sess-005', ARRAY['getTechnicianWorkOrders']),
-    (tech_id,
-      'What is the status of PUMP-201?',
-      'PUMP-201 is currently under maintenance. A critical mechanical seal failure was detected. Work order WO-2025-001 for seal replacement is currently in progress. Last repair was in May 2025 for pump cavitation, which was resolved by clearing air pockets and adjusting the inlet valve.',
-      'sess-005', ARRAY['getEquipmentHistory', 'getTechnicianWorkOrders']),
-    (tech_id,
-      'Create inspection for CHI-001 post repair. Severity low. All systems normal.',
-      'Inspection created for CHI-001 post-repair verification. Severity is LOW. The chiller output has been verified at 480 kW with a COP of 3.2. Inspection status is set to REVIEWED.',
-      'sess-006', ARRAY['createInspection'])
-  ON CONFLICT DO NOTHING;
+  -- Step 7: Transcripts (voice history) — INTENTIONALLY NOT SEEDED.
+  -- Per project requirement, voice history must reflect REAL user interactions
+  -- captured through the voice assistant. Do NOT insert mock transcripts here.
+  -- The transcripts table is left empty so the Voice History views start clean
+  -- and only fill with genuine queries made during testing/demos.
 
   -- Step 8: Equipment Documents (linked)
   INSERT INTO public.equipment_documents (equipment_id, document_name, document_type, document_text)

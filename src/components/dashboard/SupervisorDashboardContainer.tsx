@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   ClipboardList,
@@ -86,13 +87,9 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTechnician, setSelectedTechnician] = useState<User | null>(null);
 
-  // Filters for Voice History
-  const [voicePeriod, setVoicePeriod] = useState<"today" | "week" | "all">("all");
-  const [voiceTechFilter, setVoiceTechFilter] = useState<string>("all");
-
-  // Status/Priority Filter States for lists
-  const [woStatusFilter, setWoStatusFilter] = useState<string>("all");
-  const [inspSeverityFilter, setInspSeverityFilter] = useState<string>("all");
+  // Critical Alerts filters
+  const [alertSeverityFilter, setAlertSeverityFilter] = useState<string>("all");
+  const [alertStatusFilter, setAlertStatusFilter] = useState<string>("all");
 
   const supabase = createClient();
 
@@ -202,48 +199,6 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
     });
   }, [data.technicians, searchQuery]);
 
-  const filteredWorkOrders = useMemo(() => {
-    return data.workOrders.filter(wo => {
-      const matchesSearch = () => {
-        if (!searchQuery) return true;
-        const term = searchQuery.toLowerCase();
-        const equip = equipmentMap.get(wo.equipment_id);
-        const tech = wo.assigned_to ? techniciansMap.get(wo.assigned_to) : null;
-        return (
-          wo.work_order_number.toLowerCase().includes(term) ||
-          wo.title.toLowerCase().includes(term) ||
-          (equip && equip.equipment_code.toLowerCase().includes(term)) ||
-          (tech && tech.full_name.toLowerCase().includes(term))
-        );
-      };
-
-      const matchesStatus = woStatusFilter === "all" || wo.status === woStatusFilter;
-
-      return matchesSearch() && matchesStatus;
-    });
-  }, [data.workOrders, searchQuery, woStatusFilter, equipmentMap, techniciansMap]);
-
-  const filteredInspections = useMemo(() => {
-    return data.inspections.filter(insp => {
-      const matchesSearch = () => {
-        if (!searchQuery) return true;
-        const term = searchQuery.toLowerCase();
-        const equip = equipmentMap.get(insp.equipment_id);
-        const tech = techniciansMap.get(insp.technician_id);
-        return (
-          insp.title.toLowerCase().includes(term) ||
-          insp.description.toLowerCase().includes(term) ||
-          (equip && equip.equipment_code.toLowerCase().includes(term)) ||
-          (tech && tech.full_name.toLowerCase().includes(term))
-        );
-      };
-
-      const matchesSeverity = inspSeverityFilter === "all" || insp.severity === inspSeverityFilter;
-
-      return matchesSearch() && matchesSeverity;
-    });
-  }, [data.inspections, searchQuery, inspSeverityFilter, equipmentMap, techniciansMap]);
-
   const filteredAlerts = useMemo(() => {
     return data.alerts.filter(alert => {
       if (!searchQuery) return true;
@@ -256,31 +211,19 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
     });
   }, [data.alerts, searchQuery, equipmentMap]);
 
-  // Critical Alerts list (Only Severity critical/high, sorted by newest)
+  // Critical Alerts list (scoped to CRITICAL/HIGH, then refined by severity + status filters)
   const criticalAlerts = useMemo(() => {
-    return filteredAlerts.filter(a => a.severity === "CRITICAL" || a.severity === "HIGH");
-  }, [filteredAlerts]);
+    return filteredAlerts.filter(a => {
+      // Section is scoped to high-importance severities only
+      const inScope = a.severity === "CRITICAL" || a.severity === "HIGH";
+      if (!inScope) return false;
 
-  // Voice history matching filters
-  const filteredVoiceTranscripts = useMemo(() => {
-    return data.transcripts.filter(t => {
-      // Tech filter
-      if (voiceTechFilter !== "all" && t.user_id !== voiceTechFilter) return false;
+      const matchesSeverity = alertSeverityFilter === "all" || a.severity === alertSeverityFilter;
+      const matchesStatus = alertStatusFilter === "all" || a.status === alertStatusFilter;
 
-      // Period filter
-      if (voicePeriod === "today") {
-        const todayStr = new Date().toDateString();
-        return new Date(t.created_at).toDateString() === todayStr;
-      }
-      if (voicePeriod === "week") {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return new Date(t.created_at) >= weekAgo;
-      }
-
-      return true;
+      return matchesSeverity && matchesStatus;
     });
-  }, [data.transcripts, voiceTechFilter, voicePeriod]);
+  }, [filteredAlerts, alertSeverityFilter, alertStatusFilter]);
 
   // Equipment requiring attention
   const equipmentRequiringAttention = useMemo(() => {
@@ -419,7 +362,7 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Active Work Orders */}
-        <div className="bg-white border border-gray-200 hover:border-[#D14923]/20 hover:-translate-y-0.5 transition duration-300 rounded-3xl p-5 flex flex-col justify-between shadow-sm group">
+        <Link href="/supervisor/work-orders" className="bg-white border border-gray-200 hover:border-[#D14923]/20 hover:-translate-y-0.5 transition duration-300 rounded-3xl p-5 flex flex-col justify-between shadow-sm group">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Work Orders</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition duration-300">
@@ -430,12 +373,12 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
             <span className="text-3xl font-black text-gray-950 leading-none">
               {data.workOrders.filter(w => w.status !== "CLOSED").length}
             </span>
-            <p className="text-[10px] text-gray-400 mt-2 font-medium">In Open / Progress</p>
+            <p className="text-[10px] text-[#D14923] mt-2 font-bold uppercase tracking-wider">View work orders →</p>
           </div>
-        </div>
+        </Link>
 
         {/* Open Inspections */}
-        <div className="bg-white border border-gray-200 hover:border-[#D14923]/20 hover:-translate-y-0.5 transition duration-300 rounded-3xl p-5 flex flex-col justify-between shadow-sm group">
+        <Link href="/supervisor/inspections" className="bg-white border border-gray-200 hover:border-[#D14923]/20 hover:-translate-y-0.5 transition duration-300 rounded-3xl p-5 flex flex-col justify-between shadow-sm group">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Open Inspections</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition duration-300">
@@ -446,9 +389,9 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
             <span className="text-3xl font-black text-gray-950 leading-none">
               {data.inspections.filter(i => i.status === "OPEN").length}
             </span>
-            <p className="text-[10px] text-gray-400 mt-2 font-medium">Awaiting Review</p>
+            <p className="text-[10px] text-[#D14923] mt-2 font-bold uppercase tracking-wider">View inspections →</p>
           </div>
-        </div>
+        </Link>
 
         {/* Critical Alerts */}
         <div className="bg-white border border-gray-200 hover:border-[#D14923]/20 hover:-translate-y-0.5 transition duration-300 rounded-3xl p-5 flex flex-col justify-between shadow-sm group">
@@ -489,20 +432,19 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
           <SlidersHorizontal className="w-4 h-4 text-[#D14923]" />
           <h2 className="text-sm font-bold uppercase tracking-wider">Search & Filters Center</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          
+        <div className="space-y-4">
           {/* General Search Input */}
-          <div className="relative md:col-span-2">
+          <div className="relative">
             <Search className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search Technicians, WO #s, Equipment Code..."
+              placeholder="Search technicians, equipment codes, alert messages..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#D14923] focus:bg-white transition"
             />
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-900"
               >
@@ -511,53 +453,69 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
             )}
           </div>
 
-          {/* Work Orders Status Filter */}
-          <div>
-            <select
-              value={woStatusFilter}
-              onChange={e => setWoStatusFilter(e.target.value)}
-              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#D14923] transition"
-            >
-              <option value="all">All Work Order Statuses</option>
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="CLOSED">Closed</option>
-            </select>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Alert Severity Filter */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block pl-1">Alert Severity</label>
+              <select
+                value={alertSeverityFilter}
+                onChange={e => setAlertSeverityFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#D14923] transition"
+              >
+                <option value="all">All Severities</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+              </select>
+            </div>
 
-          {/* Inspections Severity Filter */}
-          <div>
-            <select
-              value={inspSeverityFilter}
-              onChange={e => setInspSeverityFilter(e.target.value)}
-              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#D14923] transition"
-            >
-              <option value="all">All Inspection Severities</option>
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="CRITICAL">Critical</option>
-            </select>
+            {/* Alert Status Filter */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block pl-1">Alert Status</label>
+              <select
+                value={alertStatusFilter}
+                onChange={e => setAlertStatusFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#D14923] transition"
+              >
+                <option value="all">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="ACKNOWLEDGED">Acknowledged</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+            </div>
           </div>
-
         </div>
       </section>
 
       {/* 3. Critical Alerts Section (Most Important Section) */}
-      <section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+      <section
+        id="alerts"
+        className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden"
+      >
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-600" />
             Critical Alerts
           </h2>
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-red-50 text-red-700 rounded-full border border-red-100">
-            {criticalAlerts.length} Active
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(alertSeverityFilter !== "all" || alertStatusFilter !== "all") && (
+              <button
+                onClick={() => { setAlertSeverityFilter("all"); setAlertStatusFilter("all"); }}
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full border border-gray-200 transition flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Clear Filters
+              </button>
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-red-50 text-red-700 rounded-full border border-red-100">
+              {criticalAlerts.length} Shown
+            </span>
+          </div>
         </div>
 
         {criticalAlerts.length === 0 ? (
           <div className="p-10 text-center text-gray-400 text-sm">
-            No Active Alerts
+            {data.alerts.some(a => a.severity === "CRITICAL" || a.severity === "HIGH")
+              ? "No alerts match the selected filters."
+              : "No Active Alerts"}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -689,11 +647,11 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
         )}
       </section>
 
-      {/* Grid for Activity Feed & Voice Monitor */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* 5. Recent Activity Feed */}
-        <section className="lg:col-span-5 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[480px]">
+      {/* 5. Recent Activity Feed (full width) */}
+      <section
+        id="activity"
+        className="scroll-mt-24 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[420px]"
+      >
           <div className="p-5 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
               <Activity className="w-5 h-5 text-indigo-500" />
@@ -730,233 +688,6 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
             )}
           </div>
         </section>
-
-        {/* 6. Voice Interaction Monitoring */}
-        <section className="lg:col-span-7 bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden flex flex-col h-[480px]">
-          <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-[#D14923]" />
-              Voice Interaction Monitoring
-            </h2>
-
-            {/* Micro Filters for transcripts */}
-            <div className="flex items-center gap-2">
-              {/* Period Select tabs */}
-              <div className="flex bg-gray-100 p-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                <button
-                  onClick={() => setVoicePeriod("all")}
-                  className={`px-2.5 py-1 rounded-md transition ${voicePeriod === "all" ? "bg-white text-gray-900 shadow-sm" : "hover:text-gray-900"}`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setVoicePeriod("today")}
-                  className={`px-2.5 py-1 rounded-md transition ${voicePeriod === "today" ? "bg-white text-gray-900 shadow-sm" : "hover:text-gray-900"}`}
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => setVoicePeriod("week")}
-                  className={`px-2.5 py-1 rounded-md transition ${voicePeriod === "week" ? "bg-white text-gray-900 shadow-sm" : "hover:text-gray-900"}`}
-                >
-                  Week
-                </button>
-              </div>
-
-              {/* Technician Dropdown */}
-              <select
-                value={voiceTechFilter}
-                onChange={e => setVoiceTechFilter(e.target.value)}
-                className="px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none"
-              >
-                <option value="all">All Techs</option>
-                {data.technicians.map(t => (
-                  <option key={t.id} value={t.id}>{t.full_name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-5 space-y-4 divide-y divide-gray-50">
-            {filteredVoiceTranscripts.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400 text-sm py-12">
-                No Voice Interactions Recorded
-              </div>
-            ) : (
-              filteredVoiceTranscripts.map((t, i) => {
-                const tech = techniciansMap.get(t.user_id);
-                return (
-                  <div key={t.id} className={`pt-4 ${i === 0 ? "pt-0" : ""} space-y-2.5`}>
-                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                      <span>Technician: <strong className="text-gray-800">{tech?.full_name ?? "Unknown"}</strong></span>
-                      <span>{getRelativeTime(t.created_at)}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="bg-[#FAF9F5] border border-gray-100 p-3 rounded-2xl flex gap-2">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest w-12 flex-shrink-0">Prompt</span>
-                        <p className="text-sm font-bold text-gray-900 leading-normal">{t.user_prompt}</p>
-                      </div>
-                      <div className="bg-[#D14923]/5 border border-[#D14923]/10 p-3 rounded-2xl flex gap-2">
-                        <span className="text-[10px] font-black text-[#D14923]/60 uppercase tracking-widest w-12 flex-shrink-0">Agent</span>
-                        <p className="text-sm text-gray-700 leading-normal font-medium">{t.agent_response}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-
-      </div>
-
-      {/* 7. Work Orders Management Table */}
-      <section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-blue-500" />
-            Work Orders Management
-          </h2>
-          <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
-            {filteredWorkOrders.length} Total
-          </span>
-        </div>
-
-        {filteredWorkOrders.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 text-sm">
-            No Active Work Orders
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#FAF9F5] border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                  <th className="p-4 px-6">WO Number</th>
-                  <th className="p-4 px-6">Equipment</th>
-                  <th className="p-4 px-6">Title</th>
-                  <th className="p-4 px-6">Priority</th>
-                  <th className="p-4 px-6">Status</th>
-                  <th className="p-4 px-6">Assigned Tech</th>
-                  <th className="p-4 px-6">Created Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredWorkOrders.map(wo => {
-                  const equip = equipmentMap.get(wo.equipment_id);
-                  const tech = wo.assigned_to ? techniciansMap.get(wo.assigned_to) : null;
-                  return (
-                    <tr key={wo.id} className="hover:bg-[#FAF9F5]/50 transition duration-150 text-sm">
-                      <td className="p-4 px-6 font-bold text-gray-900">{wo.work_order_number}</td>
-                      <td className="p-4 px-6 font-semibold text-gray-800">{equip ? equip.equipment_code : "Unknown"}</td>
-                      <td className="p-4 px-6 text-gray-600 max-w-xs truncate" title={wo.title}>{wo.title}</td>
-                      <td className="p-4 px-6">
-                        <span className={`inline-flex text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                          wo.priority === "CRITICAL" || wo.priority === "HIGH"
-                            ? "bg-red-50 text-red-700 border-red-100"
-                            : "bg-blue-50 text-blue-700 border-blue-100"
-                        }`}>
-                          {wo.priority}
-                        </span>
-                      </td>
-                      <td className="p-4 px-6">
-                        <span className={`inline-flex text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                          wo.status === "CLOSED"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                            : wo.status === "IN_PROGRESS"
-                            ? "bg-orange-50 text-orange-700 border-orange-100"
-                            : "bg-gray-100 text-gray-700 border-gray-200"
-                        }`}>
-                          {wo.status}
-                        </span>
-                      </td>
-                      <td className="p-4 px-6 font-semibold text-gray-800">
-                        {tech ? tech.full_name : "Unassigned"}
-                      </td>
-                      <td className="p-4 px-6 text-xs text-gray-500">
-                        <FormattedDate date={wo.created_at} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* 8. Inspections Overview Table */}
-      <section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
-            <FileCheck className="w-5 h-5 text-amber-500" />
-            Inspections Overview
-          </h2>
-          <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
-            {filteredInspections.length} Total
-          </span>
-        </div>
-
-        {filteredInspections.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 text-sm">
-            No Inspections Recorded
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#FAF9F5] border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                  <th className="p-4 px-6">Equipment</th>
-                  <th className="p-4 px-6">Title</th>
-                  <th className="p-4 px-6">Severity</th>
-                  <th className="p-4 px-6">Status</th>
-                  <th className="p-4 px-6">Technician</th>
-                  <th className="p-4 px-6">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredInspections.map(insp => {
-                  const equip = equipmentMap.get(insp.equipment_id);
-                  const tech = techniciansMap.get(insp.technician_id);
-                  return (
-                    <tr key={insp.id} className="hover:bg-[#FAF9F5]/50 transition duration-150 text-sm">
-                      <td className="p-4 px-6 font-bold text-gray-900">{equip ? equip.equipment_code : "Unknown"}</td>
-                      <td className="p-4 px-6 text-gray-600 max-w-xs truncate" title={insp.title}>{insp.title}</td>
-                      <td className="p-4 px-6">
-                        <span className={`inline-flex text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                          insp.severity === "CRITICAL" || insp.severity === "HIGH"
-                            ? "bg-red-50 text-red-700 border-red-100"
-                            : insp.severity === "MEDIUM"
-                            ? "bg-orange-50 text-orange-700 border-orange-100"
-                            : "bg-blue-50 text-blue-700 border-blue-100"
-                        }`}>
-                          {insp.severity}
-                        </span>
-                      </td>
-                      <td className="p-4 px-6">
-                        <span className={`inline-flex text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                          insp.status === "CLOSED"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                            : insp.status === "REVIEWED"
-                            ? "bg-blue-50 text-blue-700 border-blue-100"
-                            : "bg-orange-50 text-orange-700 border-orange-100"
-                        }`}>
-                          {insp.status}
-                        </span>
-                      </td>
-                      <td className="p-4 px-6 font-semibold text-gray-800">
-                        {tech ? tech.full_name : "Unknown"}
-                      </td>
-                      <td className="p-4 px-6 text-xs text-gray-500">
-                        <FormattedDate date={insp.created_at} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
 
       {/* Grid for Equipment requiring attention & Offline sync status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
