@@ -7,10 +7,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:
-    "bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-400 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white",
+    "bg-[#D14923] text-white hover:bg-[#B73D1C] disabled:bg-[#E8C3B5]",
   secondary:
-    "border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
-  ghost: "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800",
+    "border border-[#E5E1D8] bg-white text-[#1A1A1A] hover:bg-[#FAF9F5]",
+  ghost: "text-[#57534E] hover:bg-[#FAF0ED]",
 };
 
 export function Button({
@@ -23,7 +23,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex h-11 min-h-11 items-center justify-center rounded-lg px-4 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
+      className={`inline-flex h-11 min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D14923] disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
       disabled={disabled ?? isLoading}
       {...props}
     >

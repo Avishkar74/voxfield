@@ -21,6 +21,7 @@ export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
     liveCaptioning,
     startListening,
     stopListening,
+    stopSpeaking,
     submitTextQuery,
     getAnalyser,
   } = useVoiceAgent();
@@ -178,6 +179,18 @@ export function VoiceInput({ suggestions = [] }: VoiceInputProps) {
           <p className="text-sm font-semibold text-[#D14923]">Tap to speak</p>
         )}
       </div>
+
+      {agentState === "SPEAKING" && (
+        <button
+          onClick={stopSpeaking}
+          aria-label="Stop speaking"
+          className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200
+               bg-white hover:bg-gray-50 text-sm font-medium transition-colors text-gray-700"
+        >
+          <Square className="h-4 w-4 fill-current" />
+          Stop speaking
+        </button>
+      )}
 
       {/* Waveform canvas */}
       <div className="w-full max-w-sm h-12 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center px-4">

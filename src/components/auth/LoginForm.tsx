@@ -18,7 +18,9 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const { signIn, signUp, isLoading, error, clearError } = useAuth();
 
-  const [mode, setMode] = useState<AuthMode>("sign-in");
+
+  const initialMode = searchParams.get("mode") === "signup" ? "sign-up" : "sign-in";
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -123,26 +125,26 @@ export function LoginForm() {
   const displayedError = formError ?? error;
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-8">
+    <div className="w-full max-w-md rounded-2xl border border-[#E5E1D8] bg-white p-6 shadow-sm sm:p-8">
       <div className="mb-6 space-y-2 text-center">
-        <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+        <p className="text-sm font-medium uppercase tracking-wide text-[#D14923]">
           VoxField AI
         </p>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+        <h1 className="text-2xl font-semibold text-[#1A1A1A] font-display">
           {mode === "sign-in" ? "Sign in" : "Create account"}
         </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-[#57534E]">
           Voice-first assistant for field service operations.
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-900">
+      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-[#FAF9F5] p-1 border border-[#E5E1D8]">
         <button
           type="button"
           className={`rounded-md px-3 py-2 text-sm font-medium transition ${
             mode === "sign-in"
-              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100"
-              : "text-slate-600 dark:text-slate-400"
+              ? "bg-white text-[#1A1A1A] shadow-sm"
+              : "text-[#57534E]"
           }`}
           onClick={() => {
             setMode("sign-in");
@@ -157,8 +159,8 @@ export function LoginForm() {
           type="button"
           className={`rounded-md px-3 py-2 text-sm font-medium transition ${
             mode === "sign-up"
-              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100"
-              : "text-slate-600 dark:text-slate-400"
+              ? "bg-white text-[#1A1A1A] shadow-sm"
+              : "text-[#57534E]"
           }`}
           onClick={() => {
             setMode("sign-up");
@@ -240,3 +242,4 @@ export function LoginForm() {
     </div>
   );
 }
+
