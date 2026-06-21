@@ -1,336 +1,218 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import {
-  Mic,
-  Wifi,
-  WifiOff,
-  ClipboardList,
-  FileSearch,
-  ShieldAlert,
-  Activity,
-  ArrowRight,
-  AudioLines,
-  Brain,
-  Volume2,
-  CheckCircle2,
-} from "lucide-react";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] as const },
-  }),
-};
-
-const features = [
-  {
-    icon: Mic,
-    title: "Voice-First Operations",
-    desc: "Log work, query equipment history, and file inspections hands-free — built for the field, not the desk.",
-  },
-  {
-    icon: WifiOff,
-    title: "Offline-First PWA",
-    desc: "Keep working with no signal. Voice notes and reports queue locally and sync automatically on reconnect.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Work Orders & Inspections",
-    desc: "Create, assign, and track work orders and inspection reports across your whole asset base.",
-  },
-  {
-    icon: ShieldAlert,
-    title: "Critical Alerts",
-    desc: "Supervisors get a live, filterable view of high-severity alerts and the equipment that needs attention.",
-  },
-  {
-    icon: Brain,
-    title: "AI Maintenance Agent",
-    desc: "An assistant that understands equipment codes, repair history, and acts on natural-language commands.",
-  },
-  {
-    icon: Activity,
-    title: "Full Audit Trail",
-    desc: "Every voice interaction, action, and operation is logged for review, auditing, and operational insight.",
-  },
-];
-
-const pipeline = [
-  { icon: AudioLines, label: "Listening", desc: "Capture the technician's voice with live waveform feedback." },
-  { icon: FileSearch, label: "Transcribing", desc: "Words appear as they speak, powered by streaming speech-to-text." },
-  { icon: Brain, label: "Thinking", desc: "The agent interprets intent against live equipment data." },
-  { icon: Volume2, label: "Speaking", desc: "A natural spoken response closes the loop, hands-free." },
-];
 
 export function LandingPage() {
+  const barsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    let frame = 0;
+    let raf: number;
+
+    const animate = () => {
+      frame += 1;
+      barsRef.current.forEach((bar, i) => {
+        if (!bar) return;
+        const phase = frame * 0.04 + i * 0.6;
+        const height = 6 + Math.abs(Math.sin(phase)) * 36;
+        bar.style.height = `${height}px`;
+      });
+      raf = requestAnimationFrame(animate);
+    };
+
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#0E0C0A] text-white antialiased overflow-x-hidden">
-      {/* Ambient gradient */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[600px] w-[900px] rounded-full bg-[#D14923]/20 blur-[160px]" />
-        <div className="absolute bottom-0 right-0 h-[400px] w-[500px] rounded-full bg-[#D14923]/10 blur-[140px]" />
-      </div>
+    <main className="min-h-screen flex flex-col" style={{ background: "#FBF9F4", color: "#1A1A1A" }}>
 
       {/* Nav */}
-      <header className="relative z-20">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-2.5">
-            <div className="rounded-xl bg-[#D14923] p-2 text-white shadow-lg shadow-[#D14923]/30">
-              <Mic className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">VoxField</span>
+      <nav
+        className="w-full flex items-center justify-between px-8 py-5"
+        style={{ borderBottom: "1px solid #EEEBE3" }}
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "#D14923" }}
+          >
+            <div className="w-2 h-2 rounded-full bg-white" />
           </div>
-          <div className="hidden items-center gap-8 text-sm font-medium text-white/70 md:flex">
-            <a href="#overview" className="transition hover:text-white">Overview</a>
-            <a href="#features" className="transition hover:text-white">Features</a>
-            <a href="#workflow" className="transition hover:text-white">Workflow</a>
-          </div>
+          <span className="text-[15px] font-medium tracking-tight" style={{ color: "#1A1A1A" }}>
+            VoxField
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
           <Link
-            href="/login"
-            className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold backdrop-blur transition hover:bg-white hover:text-[#0E0C0A]"
+            href="/login?mode=signin"
+            className="px-4 py-2 text-sm rounded-lg transition-colors"
+            style={{ border: "1px solid #DEDAD1", color: "#1A1A1A", background: "transparent" }}
           >
             Sign in
           </Link>
-        </nav>
-      </header>
+          <Link
+            href="/login?mode=signup"
+            className="px-4 py-2 text-sm rounded-lg transition-colors"
+            style={{ background: "#D14923", color: "#fff" }}
+          >
+            Sign up
+          </Link>
+        </div>
+      </nav>
 
       {/* Hero */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24 pt-16 text-center md:pt-24">
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={fadeUp}
-          className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/70"
+      <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-24">
+        <span
+          className="inline-block text-[11px] uppercase tracking-widest px-4 py-1.5 rounded-full mb-8"
+          style={{ border: "1px solid #F0D9D1", color: "#D14923", background: "#FDF4F1" }}
         >
-          <span className="h-2 w-2 animate-pulse rounded-full bg-[#39FF14]" />
-          Voice-first field operations
-        </motion.div>
+          Built for the field, not the office
+        </span>
 
-        <motion.h1
-          initial="hidden"
-          animate="show"
-          custom={1}
-          variants={fadeUp}
-          className="mx-auto max-w-4xl font-serif text-4xl font-medium leading-[1.1] tracking-tight md:text-6xl"
-          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+        <h1
+          className="text-[3rem] md:text-[4rem] leading-[1.1] font-normal max-w-2xl mb-6"
+          style={{ letterSpacing: "-1.5px", fontFamily: "Georgia, serif", color: "#1A1A1A" }}
         >
-          The voice assistant for{" "}
-          <span className="text-[#D14923]">field service</span> and asset maintenance
-        </motion.h1>
+          Talk to your equipment data.{" "}
+          <em className="not-italic" style={{ color: "#D14923" }}>
+            Skip the clipboard.
+          </em>
+        </h1>
 
-        <motion.p
-          initial="hidden"
-          animate="show"
-          custom={2}
-          variants={fadeUp}
-          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/60 md:text-lg"
+        <p
+          className="text-base md:text-lg leading-relaxed max-w-md mb-10"
+          style={{ color: "#6B6860" }}
         >
-          Technicians log work, query equipment, and file inspections by voice — even offline.
-          Supervisors get a live operational picture across every asset, work order, and alert.
-        </motion.p>
+          VoxField lets field technicians log inspections, raise work orders, and
+          check equipment history by voice — hands free, even offline.
+        </p>
 
-        <motion.div
-          initial="hidden"
-          animate="show"
-          custom={3}
-          variants={fadeUp}
-          className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
+        <div className="flex flex-col sm:flex-row items-center gap-3 mb-20">
           <Link
-            href="/login"
-            className="group inline-flex items-center gap-2 rounded-full bg-[#D14923] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#D14923]/30 transition hover:bg-[#B73D1C]"
+            href="/login?mode=signup"
+            className="px-7 py-3 text-sm rounded-xl transition-colors"
+            style={{ background: "#D14923", color: "#fff" }}
           >
-            Launch the app
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            Get started →
           </Link>
-          <a
-            href="#features"
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-7 py-3.5 text-sm font-semibold text-white/80 transition hover:bg-white/5"
+          <Link
+            href="/login?mode=signin"
+            className="px-7 py-3 text-sm rounded-xl transition-colors"
+            style={{ border: "1px solid #DEDAD1", color: "#1A1A1A", background: "transparent" }}
           >
-            Explore features
-          </a>
-        </motion.div>
+            I already have an account
+          </Link>
+        </div>
 
-        {/* Hero stat strip */}
-        <motion.div
-          initial="hidden"
-          animate="show"
-          custom={4}
-          variants={fadeUp}
-          className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4"
-        >
-          {[
-            { k: "Hands-free", v: "Voice UX" },
-            { k: "Offline", v: "PWA ready" },
-            { k: "Realtime", v: "Transcription" },
-            { k: "Live", v: "Alerts" },
-          ].map((s) => (
-            <div key={s.k} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
-              <p className="text-lg font-bold text-white">{s.k}</p>
-              <p className="text-xs font-medium uppercase tracking-wider text-white/50">{s.v}</p>
-            </div>
+        {/* Waveform */}
+        <div className="flex items-end justify-center gap-[3px] h-12 mb-3">
+          {Array.from({ length: 28 }).map((_, i) => (
+            <div
+              key={i}
+              ref={(el) => { barsRef.current[i] = el; }}
+              className="w-[3px] rounded-full"
+              style={{ height: "8px", background: "#D14923", opacity: 0.5 }}
+            />
           ))}
-        </motion.div>
-      </section>
-
-      {/* Overview */}
-      <section id="overview" className="relative z-10 border-t border-white/5 bg-white/[0.02]">
-        <div className="mx-auto max-w-6xl px-6 py-24">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={fadeUp}
-            className="mx-auto max-w-3xl text-center"
-          >
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#D14923]">Project overview</p>
-            <h2 className="font-serif text-3xl font-medium md:text-4xl" style={{ fontFamily: "Georgia, serif" }}>
-              Built for technicians who can't stop to type
-            </h2>
-            <p className="mt-5 text-base leading-relaxed text-white/60">
-              VoxField pairs a natural-language AI agent with an offline-first progressive web app.
-              In the field, technicians speak; in the control room, supervisors see every action
-              reflected in real time — inspections, work orders, repair history, and critical alerts.
-            </p>
-          </motion.div>
         </div>
+        <p
+          className="text-[11px] uppercase tracking-widest"
+          style={{ color: "#AAA8A0" }}
+        >
+          Tap to speak. VoxField handles the rest.
+        </p>
       </section>
 
-      {/* Features */}
-      <section id="features" className="relative z-10">
-        <div className="mx-auto max-w-6xl px-6 py-24">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="mb-14 text-center"
+      {/* Feature cards */}
+      <div
+        className="grid grid-cols-1 md:grid-cols-3"
+        style={{ borderTop: "1px solid #EEEBE3", borderBottom: "1px solid #EEEBE3" }}
+      >
+        {[
+          {
+            title: "Speak it, don't type it",
+            desc: "Log inspections and work orders by voice, completely hands free.",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+              </svg>
+            ),
+          },
+          {
+            title: "Works without signal",
+            desc: "Keep working offline — everything syncs the moment you're back online.",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12 18.75h.008v.008H12v-.008z" />
+              </svg>
+            ),
+          },
+          {
+            title: "Ask your equipment history",
+            desc: "Query past work orders and equipment data in plain language.",
+            icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            ),
+          },
+        ].map((feature, idx) => (
+          <div
+            key={idx}
+            className="p-8 md:p-10"
+            style={{
+              borderRight: idx < 2 ? "1px solid #EEEBE3" : "none",
+              color: "#6B6860",
+            }}
           >
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#D14923]">Features</p>
-            <h2 className="font-serif text-3xl font-medium md:text-4xl" style={{ fontFamily: "Georgia, serif" }}>
-              Everything the field and the office need
-            </h2>
-          </motion.div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f, i) => {
-              const Icon = f.icon;
-              return (
-                <motion.div
-                  key={f.title}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
-                  custom={i}
-                  variants={fadeUp}
-                  className="group rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur transition hover:border-[#D14923]/40 hover:bg-white/[0.05]"
-                >
-                  <div className="mb-5 inline-flex rounded-2xl border border-white/10 bg-[#D14923]/10 p-3 text-[#D14923] transition group-hover:scale-110">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-bold">{f.title}</h3>
-                  <p className="text-sm leading-relaxed text-white/55">{f.desc}</p>
-                </motion.div>
-              );
-            })}
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center mb-5"
+              style={{ border: "1px solid #F0D9D1", color: "#D14923", background: "#FDF4F1" }}
+            >
+              {feature.icon}
+            </div>
+            <h3 className="text-sm font-medium mb-2" style={{ color: "#1A1A1A" }}>
+              {feature.title}
+            </h3>
+            <p className="text-sm leading-relaxed">{feature.desc}</p>
           </div>
-        </div>
-      </section>
-
-      {/* Voice-first workflow */}
-      <section id="workflow" className="relative z-10 border-t border-white/5 bg-white/[0.02]">
-        <div className="mx-auto max-w-6xl px-6 py-24">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="mb-14 text-center"
-          >
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-[#D14923]">Voice-first workflow</p>
-            <h2 className="font-serif text-3xl font-medium md:text-4xl" style={{ fontFamily: "Georgia, serif" }}>
-              One natural conversation, four states
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-sm text-white/55">
-              Tap once and speak. VoxField guides every interaction through a clear, unified pipeline.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
-            {pipeline.map((p, i) => {
-              const Icon = p.icon;
-              return (
-                <motion.div
-                  key={p.label}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true }}
-                  custom={i}
-                  variants={fadeUp}
-                  className="relative rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-center"
-                >
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D14923]/15 text-[#D14923]">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <div className="mb-1 text-xs font-bold uppercase tracking-widest text-white/40">Step {i + 1}</div>
-                  <h3 className="mb-2 text-base font-bold">{p.label}</h3>
-                  <p className="text-xs leading-relaxed text-white/55">{p.desc}</p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        ))}
+      </div>
 
       {/* CTA */}
-      <section className="relative z-10">
-        <div className="mx-auto max-w-5xl px-6 py-24">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#D14923]/20 via-white/[0.04] to-transparent p-10 text-center md:p-16"
-          >
-            <h2 className="font-serif text-3xl font-medium md:text-5xl" style={{ fontFamily: "Georgia, serif" }}>
-              Ready to go hands-free?
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-white/60">
-              Sign in to start logging work, querying equipment, and monitoring operations by voice.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-white/70">
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#39FF14]" /> Works offline</span>
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#39FF14]" /> Installable PWA</span>
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#39FF14]" /> Realtime transcription</span>
-            </div>
-            <Link
-              href="/login"
-              className="group mt-10 inline-flex items-center gap-2 rounded-full bg-[#D14923] px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-[#D14923]/30 transition hover:bg-[#B73D1C]"
-            >
-              Launch VoxField
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </motion.div>
-        </div>
+      <section
+        className="w-full py-20 px-6 text-center"
+        style={{ background: "#1A1A1A" }}
+      >
+        <h2
+          className="text-3xl md:text-4xl font-normal mb-4"
+          style={{ fontFamily: "Georgia, serif", color: "#FBF9F4", letterSpacing: "-0.8px" }}
+        >
+          Stop typing. Start talking.
+        </h2>
+        <p className="text-sm mb-8" style={{ color: "#888880" }}>
+          Set up your first work order by voice in under two minutes.
+        </p>
+        <Link
+          href="/login?mode=signup"
+          className="inline-block px-7 py-3 text-sm font-medium rounded-xl transition-colors"
+          style={{ background: "#D14923", color: "#fff" }}
+        >
+          Get started free
+        </Link>
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-white/40 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <Mic className="h-4 w-4 text-[#D14923]" />
-            <span className="font-semibold text-white/70">VoxField</span>
-          </div>
-          <p>© 2026 VoxField · Voice Assistant for Field Operations</p>
-          <div className="flex items-center gap-1.5 text-white/40">
-            <Wifi className="h-4 w-4" /> Offline-first
-          </div>
-        </div>
+      <footer
+        className="w-full py-6 text-center"
+        style={{ background: "#1A1A1A", borderTop: "1px solid #2a2a2a" }}
+      >
+        <p className="text-xs" style={{ color: "#555" }}>
+          VoxField — a voice-first assistant for field teams
+        </p>
       </footer>
-    </div>
+    </main>
   );
 }
