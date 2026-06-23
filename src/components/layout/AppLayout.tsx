@@ -39,16 +39,45 @@ interface NavLink {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export function AppLayout({ children, user }: AppLayoutProps) {
+interface Notification {
+  id: string;
+  type: string;
+  severity: string;
+  message: string;
+  targetUrl: string;
+  read: boolean;
+  createdAt: string;
+}
+
+
+  export function AppLayout({ children, user }: AppLayoutProps) {
   const pathname = usePathname();
+  const [notifications, setNotifications] =
+  useState<Notification[]>([]);
   const [currentHash, setCurrentHash] = useState("");
   const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useAuth();
 
-  // Sidebar collapsed/expanded (desktop)
   const [collapsed, setCollapsed] = useState(false);
-  // Mobile drawer open/closed
   const [drawerOpen, setDrawerOpen] = useState(false);
+   const [showNotifications, setShowNotifications] = useState(false);
+
+   const [readNotifications, setReadNotifications] = useState<string[]>([]);
+  useEffect(() => {
+  async function loadNotifications() {
+    try {
+      const res = await fetch("/api/notifications");
+
+      const json = await res.json();
+
+      setNotifications(json.data ?? []);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  loadNotifications();
+}, []);
   // Close drawer on route change
   useEffect(() => {
   setDrawerOpen(false);
@@ -333,14 +362,62 @@ const isLinkActive = (link: NavLink) => {
 
           <div className="flex items-center space-x-3 self-end sm:self-auto">
             <OfflineStatus />
-            <div className="relative">
-              <button
-                aria-label="Notifications"
-                className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition shadow-sm text-gray-700"
+<div className="relative">
+  <button
+    aria-label="Notifications"
+    onClick={() => setShowNotifications(!showNotifications)}
+    className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition shadow-sm text-gray-700"
+  >
+    <div className="relative">
+      <Bell className="w-4 h-4" />
+
+{notifications.filter(n => !n.read).length > 0 && (
+  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-1.5 rounded-full">
+    {notifications.filter(n => !n.read).length}
+  </span>
+)}
+    </div>
+  </button>
+
+  {showNotifications && (
+    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50">
+      <div className="p-3 border-b">
+        <h3 className="font-semibold text-sm">
+          Notifications
+        </h3>
+      </div>
+
+      <div className="max-h-72 overflow-y-auto">
+{notifications.map((notification) => (
+  <div
+    key={notification.id}
+    onClick={() => {
+      setShowNotifications(false);
+      router.push(notification.targetUrl);
+    }}
+    className="p-3 border-b hover:bg-gray-50 cursor-pointer transition"
+  >
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className={`text-xs font-semibold ${
+                  notification.severity === "CRITICAL"
+                    ? "text-red-600"
+                    : "text-orange-600"
+                }`}
               >
-                <Bell className="w-4 h-4" />
-              </button>
+                {notification.severity}
+              </span>
             </div>
+
+            <p className="text-sm text-gray-700">
+              {notification.message}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
           </div>
         </div>
 
