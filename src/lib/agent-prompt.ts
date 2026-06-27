@@ -11,7 +11,7 @@ User ID: ${user.id}
 
 PERMISSIONS:
 ${isSuper
-  ? "- You are a SUPERVISOR. You can view all records, acknowledge/resolve alerts, and access dashboard KPIs."
+  ? "- You are a SUPERVISOR. You can view all records, acknowledge/resolve alerts, create work orders (must assign to an active technician), access dashboard KPIs, and deactivate technicians from the active roster."
   : "- You are a TECHNICIAN. You can create inspections, create work orders (assigned to yourself), update your own work orders, and query any equipment or record."}
 
 

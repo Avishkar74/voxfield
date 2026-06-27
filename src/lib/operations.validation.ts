@@ -78,6 +78,11 @@ export const createWorkOrderSchema = z.object({
     .uuid("Assigned technician must be a valid UUID")
     .nullable()
     .optional(),
+  alertId: z
+    .string()
+    .uuid("Alert ID must be a valid UUID")
+    .nullable()
+    .optional(),
 });
 
 export const updateWorkOrderSchema = z

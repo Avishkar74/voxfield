@@ -12,5 +12,5 @@ export const POST = withApiHandler(
 
     return apiSuccess(result, 201);
   },
-  { auth: true, roles: ["TECHNICIAN"] },
+  { auth: true, roles: ["TECHNICIAN", "SUPERVISOR"] },
 );

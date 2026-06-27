@@ -31,6 +31,10 @@ export async function requireAuth(): Promise<AuthenticatedRequestUser> {
     throw new UnauthorizedError("User profile not found");
   }
 
+  if (profile.role === "TECHNICIAN" && profile.is_active === false) {
+    throw new UnauthorizedError("Your technician account has been deactivated");
+  }
+
   return {
     id: profile.id,
     email: profile.email,

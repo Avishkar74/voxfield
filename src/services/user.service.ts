@@ -17,7 +17,12 @@ export async function getUserProfile(
     throw new ValidationError(error.message);
   }
 
-  return data;
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  return {
+    ...(data as User),
+    is_active: row.is_active !== false,
+  };
 }
 
 export async function getUserProfileByEmail(
@@ -34,5 +39,10 @@ export async function getUserProfileByEmail(
     throw new ValidationError(error.message);
   }
 
-  return data;
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  return {
+    ...(data as User),
+    is_active: row.is_active !== false,
+  };
 }
