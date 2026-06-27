@@ -20,6 +20,7 @@ export interface User {
   full_name: string;
   email: string;
   role: UserRole;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +73,7 @@ export interface WorkOrder {
   description: string;
   priority: WorkOrderPriority;
   status: WorkOrderStatus;
+  alert_id: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -150,7 +152,8 @@ export interface Database {
     Tables: {
       users: {
         Row: User;
-        Insert: Omit<User, "created_at" | "updated_at"> & {
+        Insert: Omit<User, "created_at" | "updated_at" | "is_active"> & {
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -189,8 +192,9 @@ export interface Database {
       };
       work_orders: {
         Row: WorkOrder;
-        Insert: Omit<WorkOrder, "id" | "created_at" | "updated_at"> & {
+        Insert: Omit<WorkOrder, "id" | "created_at" | "updated_at" | "alert_id"> & {
           id?: string;
+          alert_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

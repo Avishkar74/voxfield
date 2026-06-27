@@ -148,7 +148,21 @@ async function assertUserExists(
     throw new NotFoundError("Assigned user not found");
   }
 
-  return data;
+  return data as User;
+}
+
+async function assertActiveTechnician(
+  adminClient: SupabaseClient<Database>,
+  userId: string,
+): Promise<User> {
+  const user = await assertUserExists(adminClient, userId);
+  if (user.role !== "TECHNICIAN") {
+    throw new ValidationError("Work orders must be assigned to a technician");
+  }
+  if (user.is_active === false) {
+    throw new ValidationError("Cannot assign work orders to an inactive technician");
+  }
+  return user;
 }
 
 function summarizeWorkOrders(workOrders: WorkOrder[]) {
@@ -315,20 +329,29 @@ export async function createWorkOrder(
     throw new ValidationError(parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
-  if (currentUser.role !== "TECHNICIAN") {
-    throw new ForbiddenError("Only technicians can create work orders");
+  let assignedTo: string;
+
+  if (currentUser.role === "TECHNICIAN") {
+    assignedTo = parsed.data.assignedTo ?? currentUser.id;
+    await assertActiveTechnician(adminClient, assignedTo);
+  } else if (currentUser.role === "SUPERVISOR") {
+    if (!parsed.data.assignedTo) {
+      throw new ValidationError("Supervisors must assign work orders to a technician");
+    }
+    assignedTo = parsed.data.assignedTo;
+    await assertActiveTechnician(adminClient, assignedTo);
+  } else {
+    throw new ForbiddenError("Only technicians and supervisors can create work orders");
   }
 
-  const assignedTo = parsed.data.assignedTo ?? currentUser.id;
-  await assertUserExists(adminClient, assignedTo);
-
-  const { data, error } = await (adminClient as any).rpc('create_work_order_tx', {
+  const { data, error } = await (adminClient as any).rpc("create_work_order_tx", {
     p_equipment_id: parsed.data.equipmentId,
     p_created_by: currentUser.id,
     p_assigned_to: assignedTo,
     p_title: parsed.data.title,
     p_description: parsed.data.description,
     p_priority: parsed.data.priority,
+    p_alert_id: parsed.data.alertId ?? null,
   });
 
   if (error || !data) {
@@ -336,6 +359,35 @@ export async function createWorkOrder(
   }
 
   return { workOrder: data.workOrder as WorkOrder };
+}
+
+export async function deactivateTechnician(
+  adminClient: SupabaseClient<Database>,
+  currentUser: AuthenticatedRequestUser,
+  technicianId: string,
+): Promise<{ success: true }> {
+  if (currentUser.role !== "SUPERVISOR") {
+    throw new ForbiddenError("Only supervisors can deactivate technicians");
+  }
+
+  const technician = await assertUserExists(adminClient, technicianId);
+  if (technician.role !== "TECHNICIAN") {
+    throw new ValidationError("Only technician accounts can be deactivated");
+  }
+  if (technician.is_active === false) {
+    return { success: true };
+  }
+
+  const { error } = await (adminClient as any)
+    .from("users")
+    .update({ is_active: false })
+    .eq("id", technicianId);
+
+  if (error) {
+    throw new ValidationError(error.message);
+  }
+
+  return { success: true };
 }
 
 export async function updateWorkOrder(
@@ -757,7 +809,10 @@ export async function getSupervisorDashboard(
   const alerts: Alert[] = (alertsResult.data as Alert[]) ?? [];
   const transcripts: Transcript[] = (transcriptsResult.data as Transcript[]) ?? [];
   const activityLogs: ActivityLog[] = (logsResult.data as ActivityLog[]) ?? [];
-  const technicians: User[] = (usersResult.data as User[]) ?? [];
+  const technicians: User[] = ((usersResult.data as User[]) ?? []).map((t) => ({
+    ...t,
+    is_active: t.is_active !== false,
+  }));
   const equipment: Equipment[] = (equipmentResult.data as Equipment[]) ?? [];
   const repairHistory: RepairHistory[] = (repairHistoryResult.data as RepairHistory[]) ?? [];
 
@@ -765,34 +820,7 @@ export async function getSupervisorDashboard(
   const inspectionCounts = summarizeInspections(inspections);
   const alertCounts = summarizeAlerts(alerts);
 
-  // A technician is active if they have activity logs or transcripts in the last 7 days.
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-  const activeTechIds = new Set<string>();
-  activityLogs.forEach((log) => {
-    if (new Date(log.created_at) >= sevenDaysAgo) {
-      activeTechIds.add(log.user_id);
-    }
-  });
-  transcripts.forEach((t) => {
-    if (new Date(t.created_at) >= sevenDaysAgo) {
-      activeTechIds.add(t.user_id);
-    }
-  });
-
-  const activeTechs = technicians.filter((tech) => activeTechIds.has(tech.id));
-  // Fallback to total technicians with ANY activity if 7-day count is 0, to avoid showing 0 on older databases.
-  let activeTechniciansCount = activeTechs.length;
-  if (activeTechniciansCount === 0 && technicians.length > 0) {
-    const allActivityUserIds = new Set([
-      ...activityLogs.map((l) => l.user_id),
-      ...transcripts.map((t) => t.user_id),
-    ]);
-    const techniciansWithActivity = technicians.filter((tech) => allActivityUserIds.has(tech.id));
-    activeTechniciansCount =
-      techniciansWithActivity.length > 0 ? techniciansWithActivity.length : technicians.length;
-  }
+  const activeTechniciansCount = technicians.filter((tech) => tech.is_active !== false).length;
 
   return {
     user: currentUser,
@@ -878,6 +906,9 @@ export async function getSupervisorOperations(
     quantityLogs: (quantityRes.data as QuantityLog[]) || [],
     errorLogs: (errorRes.data as ErrorLog[]) || [],
     activityLogs: (activityRes.data as ActivityLog[]) || [],
-    technicians: (techsRes.data as User[]) || [],
+    technicians: ((techsRes.data as User[]) || []).map((t) => ({
+      ...t,
+      is_active: t.is_active !== false,
+    })),
   };
 }
