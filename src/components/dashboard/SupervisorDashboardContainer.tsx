@@ -21,7 +21,9 @@ import {
   ShieldAlert,
   ArrowUpDown,
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Plus,
+  UserX,
 } from "lucide-react";
 import type {
   User,
@@ -37,6 +39,7 @@ import { createClient } from "@/lib/supabase/client";
 import { OfflineSyncSection } from "./OfflineSyncSection";
 import { FormattedDate } from "./FormattedDate";
 import { AlertCircle } from "lucide-react";
+import { CreateWorkOrderModal, prefillFromAlert, type WorkOrderPrefill } from "./CreateWorkOrderModal";
 
 interface SupervisorDashboardContainerProps {
   initialData: {
@@ -90,6 +93,15 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
   // Critical Alerts filters
   const [alertSeverityFilter, setAlertSeverityFilter] = useState<string>("all");
   const [alertStatusFilter, setAlertStatusFilter] = useState<string>("all");
+
+  // Work order creation
+  const [woModalOpen, setWoModalOpen] = useState(false);
+  const [woPrefill, setWoPrefill] = useState<WorkOrderPrefill | undefined>();
+
+  // Technician visibility — inactive hidden by default
+  const [showInactiveTechnicians, setShowInactiveTechnicians] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -159,6 +171,50 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
     }
   };
 
+  const openCreateWorkOrder = (prefill?: WorkOrderPrefill) => {
+    setWoPrefill(prefill);
+    setWoModalOpen(true);
+  };
+
+  const openCreateWorkOrderFromAlert = (alert: Alert) => {
+    const equip = data.equipment.find((e) => e.id === alert.equipment_id);
+    openCreateWorkOrder(prefillFromAlert(alert, equip?.equipment_code));
+  };
+
+  const handleDeactivateTechnician = async (techId: string) => {
+    setIsDeactivating(true);
+    setDeactivateError(null);
+    try {
+      const res = await fetch(`/api/technicians/${techId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deactivate" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to deactivate technician");
+
+      setData((prev) => ({
+        ...prev,
+        technicians: prev.technicians.map((t) =>
+          t.id === techId ? { ...t, is_active: false } : t,
+        ),
+        counts: {
+          ...prev.counts,
+          activeTechnicians: prev.technicians.filter(
+            (t) => t.id !== techId && t.is_active !== false,
+          ).length,
+        },
+      }));
+      setSelectedTechnician((prev) =>
+        prev?.id === techId ? { ...prev, is_active: false } : prev,
+      );
+    } catch (err: unknown) {
+      setDeactivateError(err instanceof Error ? err.message : "Failed to deactivate");
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
   // Helper mappings
   const equipmentMap = useMemo(() => {
     const map = new Map<string, Equipment>();
@@ -189,6 +245,7 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
   // Filter and Search calculations
   const filteredTechnicians = useMemo(() => {
     return data.technicians.filter(tech => {
+      if (!showInactiveTechnicians && tech.is_active === false) return false;
       if (!searchQuery) return true;
       const term = searchQuery.toLowerCase();
       return (
@@ -197,7 +254,12 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
         tech.email.toLowerCase().includes(term)
       );
     });
-  }, [data.technicians, searchQuery]);
+  }, [data.technicians, searchQuery, showInactiveTechnicians]);
+
+  const activeTechnicianCount = useMemo(
+    () => data.technicians.filter((t) => t.is_active !== false).length,
+    [data.technicians],
+  );
 
   const filteredAlerts = useMemo(() => {
     return data.alerts.filter(alert => {
@@ -565,14 +627,24 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
                         </span>
                       </td>
                       <td className="p-4 px-6 text-right">
-                        {alert.status === "OPEN" && (
-                          <button
-                            onClick={() => handleAcknowledgeAlert(alert.id)}
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg transition"
-                          >
-                            Acknowledge
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {(alert.status === "OPEN" || alert.status === "ACKNOWLEDGED") && (
+                            <button
+                              onClick={() => openCreateWorkOrderFromAlert(alert)}
+                              className="bg-[#FAF0ED] hover:bg-[#FAD5C5] text-[#D14923] text-xs font-semibold py-1 px-3 rounded-lg transition"
+                            >
+                              Create WO
+                            </button>
+                          )}
+                          {alert.status === "OPEN" && (
+                            <button
+                              onClick={() => handleAcknowledgeAlert(alert.id)}
+                              className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg transition"
+                            >
+                              Acknowledge
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -583,21 +655,43 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
         )}
       </section>
 
-      {/* 4. Technician Monitoring Section (Large Cards view) */}
+      {/* 4. Technician Monitoring — active technicians only by default */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="font-extrabold text-gray-950 text-base flex items-center gap-2">
             <Users className="w-5 h-5 text-[#D14923]" />
-            Technician Monitoring
+            Active Technicians
           </h2>
-          <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
-            {filteredTechnicians.length} Technicians
-          </span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => openCreateWorkOrder()}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#D14923] hover:bg-[#B73D1C] px-3 py-1.5 rounded-lg transition"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Work Order
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowInactiveTechnicians((v) => !v)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${
+                showInactiveTechnicians
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              {showInactiveTechnicians ? "Hide inactive" : "Show inactive"}
+            </button>
+            <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
+              {filteredTechnicians.length} shown · {activeTechnicianCount} active
+            </span>
+          </div>
         </div>
 
         {filteredTechnicians.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-3xl p-10 text-center text-gray-400 text-sm">
-            No active technicians found matching filters.
+            {showInactiveTechnicians
+              ? "No technicians found matching filters."
+              : "No active technicians. Toggle “Show inactive” to view past technicians and their history."}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -614,8 +708,13 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
                       {tech.full_name[0].toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 group-hover:text-[#D14923] transition">
+                      <h3 className="font-bold text-gray-900 group-hover:text-[#D14923] transition flex items-center gap-2">
                         {tech.full_name}
+                        {tech.is_active === false && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                            Inactive
+                          </span>
+                        )}
                       </h3>
                       <p className="text-xs text-gray-400 font-mono mt-0.5">{tech.employee_code}</p>
                     </div>
@@ -673,7 +772,10 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
                     </div>
                     <div className="flex-1 space-y-1">
                       <p className="text-xs text-gray-900 leading-tight">
-                        <span className="font-bold">{tech?.full_name ?? "Technician"}</span>{" "}
+                        <span className="font-bold">{tech?.full_name ?? "Technician"}</span>
+                        {tech && tech.is_active === false && (
+                          <span className="text-[9px] font-medium text-gray-400 uppercase">(inactive)</span>
+                        )}{" "}
                         <span className="text-gray-500">performed</span>{" "}
                         <span className="font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wider">{log.action_type}</span>
                       </p>
@@ -787,7 +889,34 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
                       <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider">Role</span>
                       <span className="text-[#D14923] font-bold uppercase tracking-wider">{selectedTechnician.role}</span>
                     </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider">Status</span>
+                      <span className={`font-bold uppercase tracking-wider text-xs ${
+                        selectedTechnician.is_active === false ? "text-gray-500" : "text-emerald-600"
+                      }`}>
+                        {selectedTechnician.is_active === false ? "Inactive" : "Active"}
+                      </span>
+                    </div>
                   </div>
+                  {selectedTechnician.is_active !== false && (
+                    <div className="pt-3 border-t border-gray-100">
+                      <button
+                        type="button"
+                        disabled={isDeactivating}
+                        onClick={() => handleDeactivateTechnician(selectedTechnician.id)}
+                        className="inline-flex items-center gap-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-3 py-2 rounded-xl transition disabled:opacity-50"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                        {isDeactivating ? "Removing…" : "Remove from active roster"}
+                      </button>
+                      <p className="text-[10px] text-gray-400 mt-2">
+                        Deactivates login access. Past inspections, work orders, and activity remain in history.
+                      </p>
+                      {deactivateError && (
+                        <p className="text-xs text-red-500 mt-2">{deactivateError}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Current Work Orders */}
@@ -914,6 +1043,15 @@ export function SupervisorDashboardContainer({ initialData }: SupervisorDashboar
           </div>
         );
       })()}
+
+      <CreateWorkOrderModal
+        open={woModalOpen}
+        onClose={() => setWoModalOpen(false)}
+        onSuccess={() => handleManualRefresh()}
+        equipment={data.equipment}
+        technicians={data.technicians}
+        prefill={woPrefill}
+      />
     </div>
   );
 }

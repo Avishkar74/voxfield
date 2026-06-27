@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X, Wrench } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, X, Wrench, Plus } from "lucide-react";
 import type { WorkOrder, Equipment, User } from "@/types/database";
 import { FormattedDate } from "./FormattedDate";
+import { CreateWorkOrderModal } from "./CreateWorkOrderModal";
 
 interface Props {
   workOrders: WorkOrder[];
@@ -12,9 +14,11 @@ interface Props {
 }
 
 export function SupervisorWorkOrdersView({ workOrders, equipment, technicians }: Props) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [priority, setPriority] = useState("all");
+  const [woModalOpen, setWoModalOpen] = useState(false);
 
   const equipMap = useMemo(() => new Map(equipment.map((e) => [e.id, e])), [equipment]);
   const techMap = useMemo(() => new Map(technicians.map((t) => [t.id, t])), [technicians]);
@@ -71,11 +75,20 @@ export function SupervisorWorkOrdersView({ workOrders, equipment, technicians }:
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
           <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
             <Wrench className="w-5 h-5 text-blue-500" /> Work Orders
           </h2>
-          <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{filtered.length} shown</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{filtered.length} shown</span>
+            <button
+              type="button"
+              onClick={() => setWoModalOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#D14923] hover:bg-[#B73D1C] px-3 py-1.5 rounded-lg transition"
+            >
+              <Plus className="w-3.5 h-3.5" /> Create Work Order
+            </button>
+          </div>
         </div>
         {filtered.length === 0 ? (
           <div className="p-10 text-center text-gray-400 text-sm">No work orders match the filters.</div>
@@ -118,6 +131,14 @@ export function SupervisorWorkOrdersView({ workOrders, equipment, technicians }:
           </div>
         )}
       </div>
+
+      <CreateWorkOrderModal
+        open={woModalOpen}
+        onClose={() => setWoModalOpen(false)}
+        onSuccess={() => router.refresh()}
+        equipment={equipment}
+        technicians={technicians}
+      />
     </div>
   );
 }

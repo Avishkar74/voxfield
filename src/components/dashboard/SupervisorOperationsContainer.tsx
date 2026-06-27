@@ -53,6 +53,7 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showInactiveTechnicians, setShowInactiveTechnicians] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Active section tab (Work Orders | Transcriptions | Inventory | Errors | Activities | Technicians)
@@ -131,29 +132,27 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
     }
   };
 
-  // Technician deletion handler
-  const handleDeleteTechnician = async (techId: string) => {
+  // Technician deactivation (soft-remove — history preserved)
+  const handleDeactivateTechnician = async (techId: string) => {
     setIsDeleting(techId);
     setDeleteError(null);
     try {
       const res = await fetch(`/api/technicians/${techId}`, {
-        method: "DELETE",
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deactivate" }),
       });
       if (res.ok) {
-        // Remove technician from state locally
         setData(prev => ({
           ...prev,
-          technicians: prev.technicians.filter(t => t.id !== techId),
-          // Re-filter lists since cascade delete will remove child objects on DB
-          workOrders: prev.workOrders.filter(w => w.created_by !== techId && w.assigned_to !== techId),
-          transcripts: prev.transcripts.filter(t => t.user_id !== techId),
-          quantityLogs: prev.quantityLogs.filter(q => q.user_id !== techId),
-          activityLogs: prev.activityLogs.filter(a => a.user_id !== techId)
+          technicians: prev.technicians.map(t =>
+            t.id === techId ? { ...t, is_active: false } : t,
+          ),
         }));
         setConfirmDeleteId(null);
       } else {
         const json = await res.json();
-        setDeleteError(json.error || "Failed to remove technician");
+        setDeleteError(json.error || "Failed to deactivate technician");
       }
     } catch (err: any) {
       setDeleteError(err.message || "Network error occurred");
@@ -340,6 +339,9 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
 
   const filteredTechnicians = useMemo(() => {
     let list = [...data.technicians];
+    if (!showInactiveTechnicians) {
+      list = list.filter((t) => t.is_active !== false);
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       list = list.filter(t => 
@@ -349,7 +351,7 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
       );
     }
     return list;
-  }, [data.technicians, searchQuery]);
+  }, [data.technicians, searchQuery, showInactiveTechnicians]);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -786,6 +788,19 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
         {/* 6. TECHNICIAN ROSTER TABLE */}
         {activeSection === "technicians" && (
           <div className="overflow-x-auto">
+            <div className="px-6 py-3 border-b border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowInactiveTechnicians((v) => !v)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${
+                  showInactiveTechnicians
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-white text-gray-600 border-gray-200"
+                }`}
+              >
+                {showInactiveTechnicians ? "Hide inactive technicians" : "Show inactive technicians"}
+              </button>
+            </div>
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/75 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
@@ -802,7 +817,12 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
                   filteredTechnicians.map(t => (
                     <tr key={t.id} className="hover:bg-gray-50/50 transition">
                       <td className="px-6 py-4 font-bold text-gray-900">{t.employee_code}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-800">{t.full_name}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-800">
+                        {t.full_name}
+                        {t.is_active === false && (
+                          <span className="ml-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Inactive</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-gray-500">{t.email}</td>
                       <td className="px-6 py-4">
                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#FAF0ED] text-[#D14923]">
@@ -815,11 +835,11 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
                       <td className="px-6 py-4 text-right">
                         {confirmDeleteId === t.id ? (
                           <div className="flex items-center justify-end space-x-2">
-                            <span className="text-[10px] font-bold text-red-500 mr-1">Confirm delete?</span>
+                            <span className="text-[10px] font-bold text-red-500 mr-1">Deactivate account?</span>
                             <button
-                              onClick={() => handleDeleteTechnician(t.id)}
-                              disabled={isDeleting === t.id}
-                              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-sm"
+                              onClick={() => handleDeactivateTechnician(t.id)}
+                              disabled={isDeleting === t.id || t.is_active === false}
+                              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-sm disabled:opacity-50"
                             >
                               {isDeleting === t.id && <Loader2 className="w-3 h-3 animate-spin" />}
                               Yes
@@ -831,6 +851,8 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
                               No
                             </button>
                           </div>
+                        ) : t.is_active === false ? (
+                          <span className="text-[10px] text-gray-400 font-semibold">Deactivated</span>
                         ) : (
                           <button
                             onClick={() => {
@@ -840,7 +862,7 @@ export function SupervisorOperationsContainer({ initialData }: SupervisorOperati
                             className="inline-flex items-center space-x-1 px-3 py-1.5 border border-red-100 hover:border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 rounded-xl text-[10px] font-bold transition-all"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            <span>Remove</span>
+                            <span>Deactivate</span>
                           </button>
                         )}
                       </td>
