@@ -57,7 +57,7 @@ function createMockSupabase() {
 }
 
 const techUser: AuthenticatedRequestUser = {
-  id: "user-1",
+  id: "11111111-1111-4111-8111-111111111111",
   email: "tech@test.com",
   role: "TECHNICIAN",
   employeeCode: "TECH-1",
@@ -65,7 +65,7 @@ const techUser: AuthenticatedRequestUser = {
 };
 
 const supUser: AuthenticatedRequestUser = {
-  id: "user-2",
+  id: "22222222-2222-4222-8222-222222222222",
   email: "sup@test.com",
   role: "SUPERVISOR",
   employeeCode: "SUP-1",
@@ -97,7 +97,7 @@ describe("createInspection", () => {
     });
 
     const result = await createInspection(supabase, techUser, {
-      equipmentId: "00000000-0000-0000-0000-000000000000",
+      equipmentId: "33333333-3333-4333-8333-333333333333",
       title: "Test",
       description: "Test Desc",
       severity: "CRITICAL",
@@ -111,7 +111,7 @@ describe("createInspection", () => {
   it("throws ForbiddenError for non-technicians", async () => {
     const { supabase } = createMockSupabase();
     await expect(createInspection(supabase, supUser, {
-      equipmentId: "00000000-0000-0000-0000-000000000000",
+      equipmentId: "33333333-3333-4333-8333-333333333333",
       title: "Test",
       description: "Test Desc",
       severity: "CRITICAL",
@@ -122,21 +122,60 @@ describe("createInspection", () => {
 describe("createWorkOrder", () => {
   it("calls create_work_order_tx RPC for technicians", async () => {
     const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
-    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: techUser.id }, error: null }));
+    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: techUser.id, role: "TECHNICIAN", is_active: true }, error: null }));
     mockRpc.mockResolvedValue({
       data: { workOrder: { id: "wo-1" } },
       error: null,
     });
 
     const result = await createWorkOrder(supabase, techUser, {
-      equipmentId: "00000000-0000-0000-0000-000000000000",
+      equipmentId: "33333333-3333-4333-8333-333333333333",
       title: "Test",
       description: "Test Desc",
       priority: "HIGH",
     });
 
     expect(result.workOrder.id).toBe("wo-1");
-    expect(mockRpc).toHaveBeenCalledWith("create_work_order_tx", expect.any(Object));
+    expect(mockRpc).toHaveBeenCalledWith("create_work_order_tx", expect.objectContaining({
+      p_alert_id: null,
+    }));
+  });
+
+  it("allows supervisors to create work orders when assigning an active technician", async () => {
+    const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
+    mockFrom.mockReturnValue(createQueryBuilder({
+      data: { id: techUser.id, role: "TECHNICIAN", is_active: true },
+      error: null,
+    }));
+    mockRpc.mockResolvedValue({
+      data: { workOrder: { id: "wo-2" } },
+      error: null,
+    });
+
+    const result = await createWorkOrder(supabase, supUser, {
+      equipmentId: "33333333-3333-4333-8333-333333333333",
+      title: "Supervisor WO",
+      description: "From alert",
+      priority: "HIGH",
+      assignedTo: techUser.id,
+      alertId: "44444444-4444-4444-8444-444444444444",
+    });
+
+    expect(result.workOrder.id).toBe("wo-2");
+    expect(mockRpc).toHaveBeenCalledWith("create_work_order_tx", expect.objectContaining({
+      p_created_by: supUser.id,
+      p_assigned_to: techUser.id,
+    }));
+  });
+
+  it("rejects supervisors without assignedTo", async () => {
+    const { supabase } = createMockSupabase();
+    await expect(createWorkOrder(supabase, supUser, {
+      equipmentId: "33333333-3333-4333-8333-333333333333",
+      title: "Test",
+      description: "Test",
+      priority: "LOW",
+    })).rejects.toThrow(ValidationError);
   });
 });
 
@@ -179,7 +218,7 @@ describe("createVoiceTranscript", () => {
 describe("processOfflineQueue", () => {
   it("processes offline queue operations", async () => {
     const { supabase, mockRpc, mockFrom, createQueryBuilder } = createMockSupabase();
-    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: "user-1" }, error: null }));
+    mockFrom.mockReturnValue(createQueryBuilder({ data: { id: techUser.id, role: "TECHNICIAN", is_active: true }, error: null }));
 
     mockRpc.mockImplementation((name) => {
       if (name === "create_inspection_tx") {
